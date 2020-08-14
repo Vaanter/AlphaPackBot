@@ -18,10 +18,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -29,11 +29,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.imageio.ImageIO;
+import lombok.extern.flogger.Flogger;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.MessageHistory;
@@ -44,59 +44,18 @@ import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 
+@Flogger
 class Bot extends ListenerAdapter {
-  private static final String channel = "alpha-pack";
+  private static final String channel = "pack";
   private static final int MAX_RETRIEVE_SIZE = 100;
-  private static volatile String botMessageId = null;
-  private final HashMap<ArrayList<Range<Integer>>, RarityTypes> rarities = new HashMap<>(5);
-  private final HashMap<RarityTypes, Integer> base = new HashMap<>(6);
-  private final ExecutorService executor = Executors.newFixedThreadPool(3);
-  AtomicBoolean isProcessing = new AtomicBoolean(false);
-  AtomicBoolean isDatabaseEnabled = new AtomicBoolean(true);
-  boolean isPrintingEnabled = true;
-  boolean isCachingEnabled = true;
-  boolean isBotEnabled = true;
-  private Firestore db;
+  private final ExecutorService executor = Executors.newFixedThreadPool(5);
+  private final Properties properties = Properties.getInstance();
+  private volatile String botMessageId = null;
   private volatile CountDownLatch latch;
   private Thread latchThread = null;
+  private Firestore db;
 
   Bot() {
-    Range<Integer> commonRange = Range.closed(70, 100);
-
-    Range<Integer> uncommonRangeRed = Range.closed(200, 215);
-    Range<Integer> uncommonRangeGreen = Range.closed(185, 210);
-    Range<Integer> uncommonRangeBlue = Range.closed(160, 180);
-
-    Range<Integer> rareRangeRed = Range.closed(55, 80);
-    Range<Integer> rareRangeGreen = Range.closed(145, 175);
-    Range<Integer> rareRangeBlue = Range.closed(205, 230);
-
-    Range<Integer> epicRangeRed = Range.closed(135, 170);
-    Range<Integer> epicRangeGreen = Range.closed(50, 80);
-    Range<Integer> epicRangeBlue = Range.closed(155, 195);
-
-    Range<Integer> legendaryRangeRed = Range.closed(245, 255);
-    Range<Integer> legendaryRangeGreen = Range.closed(155, 170);
-    Range<Integer> legendaryRangeBlue = Range.closed(15, 30);
-
-    rarities.put(new ArrayList<>(Arrays.asList(
-        commonRange, commonRange, commonRange)), RarityTypes.COMMON);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        uncommonRangeRed, uncommonRangeGreen, uncommonRangeBlue)), RarityTypes.UNCOMMON);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        rareRangeRed, rareRangeGreen, rareRangeBlue)), RarityTypes.RARE);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        epicRangeRed, epicRangeGreen, epicRangeBlue)), RarityTypes.EPIC);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        legendaryRangeRed, legendaryRangeGreen, legendaryRangeBlue)), RarityTypes.LEGENDARY);
-
-    base.put(RarityTypes.COMMON, 0);
-    base.put(RarityTypes.UNCOMMON, 0);
-    base.put(RarityTypes.RARE, 0);
-    base.put(RarityTypes.EPIC, 0);
-    base.put(RarityTypes.LEGENDARY, 0);
-    base.put(RarityTypes.UNKNOWN, 0);
-
     try (InputStream serviceAccount = new FileInputStream("serviceAccount.json")) {
       GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
       FirebaseOptions options = new FirebaseOptions.Builder()
@@ -106,8 +65,9 @@ class Bot extends ListenerAdapter {
 
       db = FirestoreClient.getFirestore();
     } catch (IOException e) {
-      Main.logger
-          .at(Level.SEVERE)
+      properties.getIsDatabaseEnabled().set(false);
+      properties.setCachingEnabled(false);
+      log.at(Level.SEVERE)
           .log("Unable to establish connection to database!");
     }
   }
@@ -119,31 +79,32 @@ class Bot extends ListenerAdapter {
     }
     if (event.getAuthor().isBot()
         && event.getMessage().getContentRaw().contains("Processing...")
-        && isProcessing.get()) {
+        && properties.getIsProcessing().get()) {
       botMessageId = event.getMessageId();
     } else if (event.getAuthor().isBot()) {
       return;
     }
 
-    if (event.getMessage().getContentRaw().toLowerCase().startsWith("*pack") && isBotEnabled) {
+    if (event.getMessage().getContentRaw().toLowerCase(Locale.getDefault()).startsWith("*pack")
+        && properties.isBotEnabled()) {
       Set<User> mentions = new HashSet<>(event.getMessage().getMentionedUsers());
       if (mentions.isEmpty()) {
         mentions.add(event.getAuthor());
       }
       long latchSize = mentions.size();
-      if (isProcessing.get()) {
+      if (properties.getIsProcessing().get()) {
         latchSize += latch.getCount();
         latchThread.interrupt();
       }
       latch = new CountDownLatch((int) latchSize);
-      if (isPrintingEnabled && !isProcessing.get()) {
+      if (properties.isPrintingEnabled() && !properties.getIsProcessing().get()) {
         event.getChannel().sendMessage("Processing...").complete();
       }
       ArrayList<Message> messages = getMessages(event.getTextChannel());
       for (User user : mentions) {
         Runnable runnable = () -> {
-          isProcessing.set(true);
-          System.out.println("Calculating...");
+          properties.getIsProcessing().set(true);
+          log.at(Level.INFO).log("Calculating...");
           String authorId = user.getId();
           String channelId = event.getChannel().getId();
           getRaritiesForUser(messages, authorId, channelId, event.getChannel());
@@ -151,15 +112,15 @@ class Bot extends ListenerAdapter {
         };
         executor.execute(runnable);
       }
-      System.out.println("Starting latch thread...");
+      log.at(Level.INFO).log("Starting latch thread...");
       latchThread = new Thread(() -> {
         try {
           latch.await();
-          System.out.println("Latch unblocked!");
+          log.at(Level.INFO).log("Latch unblocked!");
           event.getChannel().deleteMessageById(botMessageId).complete();
-          isProcessing.set(false);
+          properties.getIsProcessing().set(false);
         } catch (InterruptedException e) {
-          System.out.println("New request received while processing, thread interrupted!");
+          log.at(Level.INFO).log("New request received while processing, thread interrupted!");
         }
       }, "latchThread");
       latchThread.start();
@@ -174,16 +135,13 @@ class Bot extends ListenerAdapter {
    * @see <a href="https://www.programcreek.com/java-api-examples/?api=net.dv8tion.jda.core.MessageHistory">Source</a>
    */
   private @NotNull ArrayList<Message> getMessages(TextChannel channel) {
-    System.out.println("Getting messages...");
+    log.at(Level.INFO).log("Getting messages...");
     ArrayList<Message> messages = new ArrayList<>();
     MessageHistory history = channel.getHistory();
     int amount = Integer.MAX_VALUE;
 
     while (amount > 0) {
-      int numToRetrieve = amount;
-      if (amount > MAX_RETRIEVE_SIZE) {
-        numToRetrieve = MAX_RETRIEVE_SIZE;
-      }
+      int numToRetrieve = amount > MAX_RETRIEVE_SIZE ? MAX_RETRIEVE_SIZE : amount;
 
       List<Message> retrieved = null;
       try {
@@ -192,13 +150,13 @@ class Bot extends ListenerAdapter {
           break;
         }
       } catch (RateLimitedException rateLimitedException) {
-        Main.logger.at(Level.INFO)
+        log.at(Level.INFO)
             .withCause(rateLimitedException)
             .log("Too many requests, waiting 5 seconds.");
         try {
           Thread.sleep(5000);
         } catch (InterruptedException interruptedException) {
-          Main.logger.at(Level.SEVERE)
+          log.at(Level.SEVERE)
               .withCause(interruptedException)
               .log("Thread interrupted while waiting!");
         }
@@ -230,14 +188,14 @@ class Bot extends ListenerAdapter {
         .filter(x -> x.getAuthor().getId().equals(authorId))
         .collect(Collectors.toCollection(ArrayList::new));
 
-    UserData temp;
-    if (isDatabaseEnabled.get()) {
-      temp = loadFromDatabase(authorId + "_" + channelId)
-          .orElse(new UserData(new HashMap<>(base), authorId, channelId));
+    UserData userData;
+    if (properties.getIsDatabaseEnabled().get()) {
+      userData = loadFromDatabase(authorId + "_" + channelId)
+          .orElse(new UserData(RarityData.getBase(), authorId, channelId));
     } else {
-      temp = new UserData(new HashMap<>(base), authorId, channelId);
+      userData = new UserData(RarityData.getBase(), authorId, channelId);
     }
-    int processedMessageCount = temp
+    int processedMessageCount = userData
         .getRarityData()
         .values()
         .stream()
@@ -249,16 +207,16 @@ class Bot extends ListenerAdapter {
       double processed = 0;
       for (Message message : messagesFiltered) {
         RarityTypes rarity = getRarity(message.getAttachments().get(0).getUrl());
-        temp.replace(rarity);
+        userData.replace(rarity);
         ++processed;
         double percentage = (processed / messagesFiltered.size()) * 100;
-        System.out.println("Processed: " + String.format("%.2f", percentage) + "%");
+        log.at(Level.INFO).log("Processed: " + String.format("%.2f", percentage) + "%");
       }
     }
-    if (isCachingEnabled) {
-      saveToDatabase(temp);
+    if (properties.isCachingEnabled()) {
+      saveToDatabase(userData);
     }
-    printRarityPerUser(temp, channel);
+    printRarityPerUser(userData, channel);
   }
 
   private Optional<UserData> loadFromDatabase(String docId) {
@@ -281,7 +239,7 @@ class Bot extends ListenerAdapter {
             Preconditions.checkNotNull(document.getString("channelId"))));
       }
     } catch (InterruptedException | ExecutionException e) {
-      Main.logger.at(Level.SEVERE)
+      log.at(Level.SEVERE)
           .withCause(e)
           .log("Exception occurred while getting messages from database!");
     }
@@ -305,24 +263,28 @@ class Bot extends ListenerAdapter {
       int green = color.getGreen();
       int blue = color.getBlue();
 
-      Set<ArrayList<Range<Integer>>> rarityRanges = rarities.keySet();
+      if (red == blue && red == green) {
+        return RarityTypes.COMMON;
+      }
+
+      HashMap<ArrayList<Range<Integer>>, RarityTypes> tmp = RarityData.getRarities();
+      Set<ArrayList<Range<Integer>>> rarityRanges = tmp.keySet();
       ArrayList<RarityTypes> matchingRarities = new ArrayList<>();
       for (ArrayList<Range<Integer>> rarityRange : rarityRanges) {
         if (rarityRange.get(0).contains(red)) {
-          matchingRarities.add(rarities.get(rarityRange));
+          matchingRarities.add(tmp.get(rarityRange));
         }
         if (rarityRange.get(1).contains(green)) {
-          matchingRarities.add(rarities.get(rarityRange));
+          matchingRarities.add(tmp.get(rarityRange));
         }
         if (rarityRange.get(2).contains(blue)) {
-          matchingRarities.add(rarities.get(rarityRange));
+          matchingRarities.add(tmp.get(rarityRange));
         }
       }
 
       if (red != blue && red != green) {
         matchingRarities.removeIf(x -> x.equals(RarityTypes.COMMON));
       }
-      //System.out.println(matchingRarities);
 
       Set<RarityTypes> matchingRaritiesCheck = new HashSet<>(matchingRarities);
 
@@ -340,13 +302,9 @@ class Bot extends ListenerAdapter {
         }
       }
 
-      //ArrayList<Integer> colors =
-      //    new ArrayList<>(Arrays.asList(color.getRed(), color.getGreen(), color.getBlue()));
-      //System.out.println(colors);
-      //System.out.println(matchingRarities);
       return maxEntry != null ? maxEntry.getKey() : RarityTypes.UNKNOWN;
     } catch (IOException e) {
-      Main.logger.at(Level.SEVERE)
+      log.at(Level.SEVERE)
           .withCause(e)
           .log("Exception was thrown while getting image!");
     }
@@ -374,7 +332,7 @@ class Bot extends ListenerAdapter {
     try {
       System.out.println("Write time : " + result.get().getUpdateTime());
     } catch (InterruptedException | ExecutionException e) {
-      Main.logger.at(Level.SEVERE)
+      log.at(Level.SEVERE)
           .withCause(e)
           .log("Exception was thrown while saving data to database!");
     }
@@ -403,9 +361,9 @@ class Bot extends ListenerAdapter {
         + RarityTypes.LEGENDARY + ": " + userData.getRarityData().get(RarityTypes.LEGENDARY) + "\n"
         + RarityTypes.UNKNOWN + ": " + userData.getRarityData().get(RarityTypes.UNKNOWN);
 
-    System.out.println(message);
+    log.at(Level.INFO).log(message);
 
-    if (isPrintingEnabled) {
+    if (properties.isPrintingEnabled()) {
       channel.sendMessage(message).complete();
     }
   }

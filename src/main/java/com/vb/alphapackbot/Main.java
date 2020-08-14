@@ -2,31 +2,38 @@ package com.vb.alphapackbot;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.flogger.FluentLogger;
 import java.nio.charset.Charset;
 import java.util.Scanner;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import javax.security.auth.login.LoginException;
+import lombok.extern.flogger.Flogger;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 
+@Flogger
 public class Main {
-  static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final ImmutableSet<String> commands = ImmutableSet.of(
+  private final Properties properties = Properties.getInstance();
+  private final ImmutableSet<String> commands = ImmutableSet.of(
       "exit",
-      "toggle-printing",
+      "status",
       "uptime",
+      "toggle-printing",
       "toggle-caching",
       "toggle-bot",
       "toggle-database");
-  private static AtomicReference<JDA> mainJda;
+  private JDA mainJda;
 
-  /**Starts the bot.
+  /**
+   * Starts the bot.
    *
    * @param args default main argument
    */
   public static void main(String[] args) {
+    Main main = new Main();
+    main.botManager();
+  }
+
+  private void botManager() {
     Stopwatch stopwatch = Stopwatch.createStarted();
     Bot mainBot = new Bot();
     Thread mainBotThread = new Thread(() -> {
@@ -34,9 +41,9 @@ public class Main {
       JDABuilder jda = JDABuilder.createDefault(token);
       jda.addEventListeners(mainBot);
       try {
-        mainJda = new AtomicReference<>(jda.build());
+        mainJda = jda.build();
       } catch (LoginException e) {
-        logger.at(Level.SEVERE)
+        log.at(Level.SEVERE)
             .withCause(e)
             .log("Invalid token!");
       }
@@ -47,30 +54,32 @@ public class Main {
     while (true) {
       String command = scanner.nextLine();
       if (command.equalsIgnoreCase("exit")) {
-        if (mainBot.isProcessing.get()) {
+        if (properties.getIsProcessing().get()) {
           System.out.print("Bot is currently processing. Exit? (N/y) ");
           String check = scanner.nextLine();
           if (!check.equalsIgnoreCase("y")) {
             continue;
           }
         }
-        mainJda.get().shutdownNow();
+        mainJda.shutdownNow();
         scanner.close();
         System.exit(0);
       } else if (command.equalsIgnoreCase("toggle-printing")) {
-        mainBot.isPrintingEnabled = !mainBot.isPrintingEnabled;
-        System.out.println("Is printing enabled: " + mainBot.isPrintingEnabled);
+        properties.setPrintingEnabled(!properties.isPrintingEnabled());
+        log.atInfo().log("Is printing enabled: " + properties.isPrintingEnabled());
       } else if (command.equalsIgnoreCase("uptime")) {
-        System.out.println("Uptime: " + stopwatch.elapsed());
+        log.atInfo().log("Uptime: " + stopwatch.elapsed());
       } else if (command.equalsIgnoreCase("toggle-caching")) {
-        mainBot.isCachingEnabled = !mainBot.isCachingEnabled;
-        System.out.println("Is caching enabled: " + mainBot.isCachingEnabled);
+        properties.setCachingEnabled(!properties.isCachingEnabled());
+        log.atInfo().log("Is caching enabled: " + properties.isCachingEnabled());
       } else if (command.equalsIgnoreCase("toggle-bot")) {
-        mainBot.isBotEnabled = !mainBot.isBotEnabled;
-        System.out.println("Is bot enabled: " + mainBot.isBotEnabled);
+        properties.setBotEnabled(!properties.isBotEnabled());
+        log.atInfo().log("Is bot enabled: " + properties.isBotEnabled());
       } else if (command.equalsIgnoreCase("toggle-database")) {
-        mainBot.isDatabaseEnabled.set(!mainBot.isDatabaseEnabled.get());
-        System.out.println("Is database enabled: " + mainBot.isDatabaseEnabled.get());
+        properties.getIsDatabaseEnabled().set(!properties.getIsDatabaseEnabled().get());
+        log.atInfo().log("Is database enabled: " + properties.getIsDatabaseEnabled().get());
+      } else if (command.equalsIgnoreCase("status")) {
+        log.atInfo().log(properties.toString());
       } else {
         System.out.println("Commands:");
         commands.forEach(System.out::println);
