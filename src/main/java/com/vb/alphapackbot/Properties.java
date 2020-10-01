@@ -16,7 +16,7 @@ public class Properties {
   @Setter
   private boolean isCachingEnabled = true;
   @Setter
-  private boolean isBotEnabled = true;
+  private volatile boolean isBotEnabled = true;
 
   private Properties() {
   }

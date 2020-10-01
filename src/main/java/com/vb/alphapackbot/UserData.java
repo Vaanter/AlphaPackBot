@@ -1,14 +1,14 @@
 package com.vb.alphapackbot;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import org.jetbrains.annotations.NotNull;
 
 class UserData {
-  private final HashMap<RarityTypes, Integer> rarityData;
+  private final EnumMap<RarityTypes, Integer> rarityData;
   private final String authorId;
   private final String channelId;
 
-  UserData(@NotNull HashMap<RarityTypes, Integer> rarityData,
+  UserData(@NotNull EnumMap<RarityTypes, Integer> rarityData,
            @NotNull String authorId,
            @NotNull String channelId) {
     this.rarityData = rarityData;
@@ -16,7 +16,7 @@ class UserData {
     this.channelId = channelId;
   }
 
-  HashMap<RarityTypes, Integer> getRarityData() {
+  EnumMap<RarityTypes, Integer> getRarityData() {
     return rarityData;
   }
 
@@ -24,7 +24,7 @@ class UserData {
     return authorId;
   }
 
-  void replace(RarityTypes rarity) {
+  void increment(RarityTypes rarity) {
     rarityData.replace(rarity, rarityData.get(rarity) + 1);
   }
 

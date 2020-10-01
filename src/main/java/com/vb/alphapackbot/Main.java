@@ -4,7 +4,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import java.nio.charset.Charset;
 import java.util.Scanner;
-import java.util.logging.Level;
 import javax.security.auth.login.LoginException;
 import lombok.extern.flogger.Flogger;
 import net.dv8tion.jda.api.JDA;
@@ -43,7 +42,7 @@ public class Main {
       try {
         mainJda = jda.build();
       } catch (LoginException e) {
-        log.at(Level.SEVERE)
+        log.atSevere()
             .withCause(e)
             .log("Invalid token!");
       }
@@ -57,34 +56,35 @@ public class Main {
         if (properties.getIsProcessing().get()) {
           System.out.print("Bot is currently processing. Exit? (N/y) ");
           String check = scanner.nextLine();
-          if (!check.equalsIgnoreCase("y")) {
-            continue;
+          if (check.equalsIgnoreCase("y")) {
+            break;
           }
         }
-        mainJda.shutdownNow();
-        scanner.close();
-        System.exit(0);
       } else if (command.equalsIgnoreCase("toggle-printing")) {
         properties.setPrintingEnabled(!properties.isPrintingEnabled());
-        log.atInfo().log("Is printing enabled: " + properties.isPrintingEnabled());
+        System.out.println("Is printing enabled: " + properties.isPrintingEnabled());
       } else if (command.equalsIgnoreCase("uptime")) {
-        log.atInfo().log("Uptime: " + stopwatch.elapsed());
+        System.out.println("Uptime: " + stopwatch.elapsed());
       } else if (command.equalsIgnoreCase("toggle-caching")) {
         properties.setCachingEnabled(!properties.isCachingEnabled());
-        log.atInfo().log("Is caching enabled: " + properties.isCachingEnabled());
+        System.out.println("Is caching enabled: " + properties.isCachingEnabled());
       } else if (command.equalsIgnoreCase("toggle-bot")) {
         properties.setBotEnabled(!properties.isBotEnabled());
-        log.atInfo().log("Is bot enabled: " + properties.isBotEnabled());
+        System.out.println("Is bot enabled: " + properties.isBotEnabled());
       } else if (command.equalsIgnoreCase("toggle-database")) {
         properties.getIsDatabaseEnabled().set(!properties.getIsDatabaseEnabled().get());
-        log.atInfo().log("Is database enabled: " + properties.getIsDatabaseEnabled().get());
+        System.out.println("Is database enabled: " + properties.getIsDatabaseEnabled().get());
       } else if (command.equalsIgnoreCase("status")) {
-        log.atInfo().log(properties.toString());
+        System.out.println(properties.toString());
       } else {
         System.out.println("Commands:");
         commands.forEach(System.out::println);
         System.out.println();
       }
     }
+  
+    mainJda.shutdownNow();
+    scanner.close();
+    System.exit(0);
   }
 }

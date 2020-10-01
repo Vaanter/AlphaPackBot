@@ -1,13 +1,15 @@
 package com.vb.alphapackbot;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.EnumMap;
+import lombok.Getter;
 
 public final class RarityData {
-  private static final HashMap<ArrayList<Range<Integer>>, RarityTypes> rarities = new HashMap<>(5);
-  private static final HashMap<RarityTypes, Integer> base = new HashMap<>(6);
+  @Getter
+  private static ImmutableMap<ImmutableList<Range<Integer>>, RarityTypes> rarities;
+  private static ImmutableMap<RarityTypes, Integer> base;
 
   static {
     Range<Integer> commonRange = Range.closed(70, 100);
@@ -28,30 +30,30 @@ public final class RarityData {
     Range<Integer> legendaryRangeGreen = Range.closed(155, 170);
     Range<Integer> legendaryRangeBlue = Range.closed(15, 30);
 
-    rarities.put(new ArrayList<>(Arrays.asList(
-        commonRange, commonRange, commonRange)), RarityTypes.COMMON);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        uncommonRangeRed, uncommonRangeGreen, uncommonRangeBlue)), RarityTypes.UNCOMMON);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        rareRangeRed, rareRangeGreen, rareRangeBlue)), RarityTypes.RARE);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        epicRangeRed, epicRangeGreen, epicRangeBlue)), RarityTypes.EPIC);
-    rarities.put(new ArrayList<>(Arrays.asList(
-        legendaryRangeRed, legendaryRangeGreen, legendaryRangeBlue)), RarityTypes.LEGENDARY);
+    var commons = ImmutableList.of(commonRange, commonRange, commonRange, commonRange, commonRange);
+    var uncommons = ImmutableList.of(uncommonRangeRed, uncommonRangeGreen, uncommonRangeBlue);
+    var rares = ImmutableList.of(rareRangeRed, rareRangeGreen, rareRangeBlue);
+    var epics = ImmutableList.of(epicRangeRed, epicRangeGreen, epicRangeBlue);
+    var legendaries = ImmutableList.of(legendaryRangeRed, legendaryRangeGreen, legendaryRangeBlue);
+    
+    
+    rarities = ImmutableMap.of(
+        commons, RarityTypes.COMMON,
+        uncommons, RarityTypes.UNCOMMON,
+        rares, RarityTypes.RARE,
+        epics, RarityTypes.EPIC,
+        legendaries, RarityTypes.LEGENDARY);
 
-    base.put(RarityTypes.COMMON, 0);
-    base.put(RarityTypes.UNCOMMON, 0);
-    base.put(RarityTypes.RARE, 0);
-    base.put(RarityTypes.EPIC, 0);
-    base.put(RarityTypes.LEGENDARY, 0);
-    base.put(RarityTypes.UNKNOWN, 0);
+    ImmutableMap.Builder<RarityTypes, Integer> builder = ImmutableMap.builderWithExpectedSize(6);
+    for (RarityTypes rarityType: RarityTypes.values()) {
+      builder.put(rarityType, 0);
+    }
+    base = builder.build();
   }
 
-  static HashMap<ArrayList<Range<Integer>>, RarityTypes> getRarities() {
-    return rarities;
-  }
+  private RarityData() {}
 
-  static HashMap<RarityTypes, Integer> getBase() {
-    return new HashMap<>(base);
+  static EnumMap<RarityTypes, Integer> getBase() {
+    return new EnumMap<>(base);
   }
 }

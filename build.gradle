@@ -10,7 +10,7 @@ plugins {
 mainClassName = "com.vb.alphapackbot.Main"
 
 group 'com.vb'
-version '1.5.0'
+version '1.5.3'
 
 repositories {
     mavenCentral()
@@ -18,13 +18,13 @@ repositories {
 }
 
 dependencies {
-    implementation 'net.dv8tion:JDA:4.2.0_189'
+    implementation 'net.dv8tion:JDA:4.2.0_198'
 
     implementation "org.slf4j:slf4j-api:2.0.0-alpha1"
     implementation "org.slf4j:slf4j-simple:2.0.0-alpha1"
 
     implementation "com.google.guava:guava:29.0-jre"
-    implementation 'com.google.firebase:firebase-admin:6.16.0'
+    implementation 'com.google.firebase:firebase-admin:7.0.0'
     errorprone("com.google.errorprone:error_prone_core:2.3.4")
 
     implementation 'com.google.flogger:flogger:0.5.1'
