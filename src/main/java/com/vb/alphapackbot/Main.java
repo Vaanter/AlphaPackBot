@@ -1,44 +1,50 @@
 package com.vb.alphapackbot;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
-import java.nio.charset.Charset;
+import com.google.common.flogger.FluentLogger;
+import io.micronaut.configuration.picocli.PicocliRunner;
 import java.util.Scanner;
+import javax.inject.Inject;
 import javax.security.auth.login.LoginException;
 import lombok.extern.flogger.Flogger;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
 @Flogger
-public class Main {
+@Command(name = "AlphaPackBot",
+    description = "Bot for counting various types from packs in R6 Siege",
+    mixinStandardHelpOptions = true)
+public class Main implements Runnable {
   private final Properties properties = Properties.getInstance();
   private final ImmutableSet<String> commands = ImmutableSet.of(
       "exit",
       "status",
       "uptime",
-      "toggle-printing",
-      "toggle-caching",
       "toggle-bot",
       "toggle-database");
   private JDA mainJda;
 
-  /**
-   * Starts the bot.
-   *
-   * @param args default main argument
-   */
+  @Parameters(index = "0", description = "Token used for Bot initialisation", arity = "1")
+  String token;
+
+  @Inject
+  MessageHandler messageHandler;
   public static void main(String[] args) {
-    Main main = new Main();
-    main.botManager();
+    PicocliRunner.run(Main.class, args);
   }
 
-  private void botManager() {
+  @Override
+  public void run() {
     Stopwatch stopwatch = Stopwatch.createStarted();
-    Bot mainBot = new Bot();
     Thread mainBotThread = new Thread(() -> {
-      String token = "NjkzNTYxNzM0MzYyODI0Nzc2.Xn-6ag.AZKdPcmHTIAsB4QNebS7Z5ROQkk";
-      JDABuilder jda = JDABuilder.createDefault(token);
-      jda.addEventListeners(mainBot);
+      JDABuilder jda = JDABuilder
+          .createLight(token)
+          .addEventListeners(messageHandler);
       try {
         mainJda = jda.build();
       } catch (LoginException e) {
@@ -48,43 +54,42 @@ public class Main {
       }
     }, "mainBotThread");
     mainBotThread.start();
-    Scanner scanner = new Scanner(System.in, Charset.defaultCharset());
-    //Commands
-    while (true) {
-      String command = scanner.nextLine();
-      if (command.equalsIgnoreCase("exit")) {
-        if (properties.getIsProcessing().get()) {
-          System.out.print("Bot is currently processing. Exit? (N/y) ");
-          String check = scanner.nextLine();
-          if (check.equalsIgnoreCase("y")) {
+    try(Scanner scanner = new Scanner(System.in, Charsets.UTF_8)) {
+      //Commands
+      while (true) {
+        String command = scanner.nextLine();
+        if (command.equalsIgnoreCase("exit")) {
+          synchronized (properties.getProcessingCounter()) {
+            if (properties.getProcessingCounter().longValue() > 0) {
+              System.out.print("Bot is currently processing. Exit? (N/y) ");
+              String check = scanner.nextLine();
+              if (!check.equalsIgnoreCase("y")) {
+                continue;
+              }
+            }
             break;
           }
+        } else if (command.equalsIgnoreCase("toggle-printing")) {
+          properties.setPrintingEnabled(!properties.isPrintingEnabled());
+          System.out.println("Is printing enabled: " + properties.isPrintingEnabled());
+        } else if (command.equalsIgnoreCase("uptime")) {
+          System.out.println("Uptime: " + stopwatch.elapsed());
+        } else if (command.equalsIgnoreCase("toggle-bot")) {
+          properties.setBotEnabled(!properties.isBotEnabled());
+          System.out.println("Is bot enabled: " + properties.isBotEnabled());
+        } else if (command.equalsIgnoreCase("toggle-database")) {
+          properties.setDatabaseEnabled(!properties.isDatabaseEnabled());
+          System.out.println("Is database enabled: " + properties.isDatabaseEnabled());
+        } else if (command.equalsIgnoreCase("status")) {
+          System.out.println(properties.toString());
+        } else {
+          System.out.println("Commands:");
+          commands.forEach(System.out::println);
+          System.out.println();
         }
-      } else if (command.equalsIgnoreCase("toggle-printing")) {
-        properties.setPrintingEnabled(!properties.isPrintingEnabled());
-        System.out.println("Is printing enabled: " + properties.isPrintingEnabled());
-      } else if (command.equalsIgnoreCase("uptime")) {
-        System.out.println("Uptime: " + stopwatch.elapsed());
-      } else if (command.equalsIgnoreCase("toggle-caching")) {
-        properties.setCachingEnabled(!properties.isCachingEnabled());
-        System.out.println("Is caching enabled: " + properties.isCachingEnabled());
-      } else if (command.equalsIgnoreCase("toggle-bot")) {
-        properties.setBotEnabled(!properties.isBotEnabled());
-        System.out.println("Is bot enabled: " + properties.isBotEnabled());
-      } else if (command.equalsIgnoreCase("toggle-database")) {
-        properties.getIsDatabaseEnabled().set(!properties.getIsDatabaseEnabled().get());
-        System.out.println("Is database enabled: " + properties.getIsDatabaseEnabled().get());
-      } else if (command.equalsIgnoreCase("status")) {
-        System.out.println(properties.toString());
-      } else {
-        System.out.println("Commands:");
-        commands.forEach(System.out::println);
-        System.out.println();
       }
     }
-  
     mainJda.shutdownNow();
-    scanner.close();
     System.exit(0);
   }
 }
