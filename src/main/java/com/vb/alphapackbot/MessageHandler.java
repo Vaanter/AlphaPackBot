@@ -33,13 +33,11 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.imageio.ImageIO;
-import javax.inject.Singleton;
-import lombok.extern.flogger.Flogger;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
@@ -72,7 +70,7 @@ public class MessageHandler extends ListenerAdapter {
   }
 
   @Override
-  public void onMessageReceived(@Nonnull MessageReceivedEvent event) {
+  public void onGuildMessageReceived(@Nonnull final GuildMessageReceivedEvent event) {
     if (!event.getChannel().getName().contains(CHANNEL) || event.getAuthor().isBot()) {
       return;
     }
@@ -125,7 +123,7 @@ public class MessageHandler extends ListenerAdapter {
   }
 
   /**
-   * Returns specified amount of messages from specific channel.
+   * Returns all messages from specific channel.
    *
    * @param channel channel to get messages from
    * @return ArrayList of messages

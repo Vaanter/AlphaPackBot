@@ -12,17 +12,17 @@ public class Properties {
   private final LongAdder processingCounter = new LongAdder();
 
   /**
-   * Flag that enables/disables use of database.
+   * Enables/disables use of database.
    */
   private volatile boolean databaseEnabled = true;
 
   /**
-   * Flag that enables/disables sending messages to Discord.
+   * Enables/disables sending messages to Discord.
    */
   private volatile boolean isPrintingEnabled = true;
 
   /**
-   * Flag that enables/disables all non-management bot processes.
+   * Enables/disables all non-management bot processes.
    */
   private volatile boolean isBotEnabled = true;
 

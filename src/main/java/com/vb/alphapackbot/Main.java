@@ -4,22 +4,24 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import java.util.Scanner;
-import javax.inject.Inject;
 import javax.security.auth.login.LoginException;
-import lombok.extern.flogger.Flogger;
-import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
-@Flogger
 @Command(name = "AlphaPackBot",
     description = "Bot for counting various types from packs in R6 Siege",
     mixinStandardHelpOptions = true)
 public class Main implements Runnable {
+  static {
+    System.setProperty(
+        "flogger.backend_factory", "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
+  }
+
+  private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private final Properties properties = Properties.getInstance();
   private final ImmutableSet<String> commands = ImmutableSet.of(
       "exit",
@@ -32,14 +34,13 @@ public class Main implements Runnable {
   @Parameters(index = "0", description = "Token used for Bot initialisation", arity = "1")
   String token;
 
-  @Inject
-  MessageHandler messageHandler;
   public static void main(String[] args) {
-    PicocliRunner.run(Main.class, args);
+    new CommandLine(new Main()).execute(args);
   }
 
   @Override
   public void run() {
+    MessageHandler messageHandler = new MessageHandler();
     Stopwatch stopwatch = Stopwatch.createStarted();
     Thread mainBotThread = new Thread(() -> {
       JDABuilder jda = JDABuilder
@@ -47,14 +48,21 @@ public class Main implements Runnable {
           .addEventListeners(messageHandler);
       try {
         mainJda = jda.build();
+        mainJda.awaitReady();
       } catch (LoginException e) {
         log.atSevere()
             .withCause(e)
             .log("Invalid token!");
+        System.exit(1);
+      } catch (InterruptedException e) {
+        log.atSevere()
+            .withCause(e)
+            .log("Interrupted while getting ready!");
+        System.exit(2);
       }
     }, "mainBotThread");
     mainBotThread.start();
-    try(Scanner scanner = new Scanner(System.in, Charsets.UTF_8)) {
+    try (Scanner scanner = new Scanner(System.in, Charsets.UTF_8)) {
       //Commands
       while (true) {
         String command = scanner.nextLine();

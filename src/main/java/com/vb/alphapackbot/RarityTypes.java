@@ -24,33 +24,33 @@ public enum RarityTypes {
     switch (rarity) {
       case "Common":
         range = ImmutableList.of(
-            Range.closed(70, 100),
-            Range.closed(70, 100),
-            Range.closed(70, 100));
+            Range.closed(60, 100),
+            Range.closed(60, 100),
+            Range.closed(60, 100));
         break;
       case "Uncommon":
         range = ImmutableList.of(
-            Range.closed(200, 235),
-            Range.closed(185, 220),
-            Range.closed(160, 195));
+            Range.closed(200, 250),
+            Range.closed(185, 235),
+            Range.closed(160, 210));
         break;
       case "Rare":
         range = ImmutableList.of(
-            Range.closed(55, 95),
-            Range.closed(145, 190),
-            Range.closed(205, 250));
+            Range.closed(55, 105),
+            Range.closed(135, 200),
+            Range.closed(185, 255));
         break;
       case "Epic":
         range = ImmutableList.of(
-            Range.closed(135, 175),
+            Range.closed(135, 185),
             Range.closed(50, 90),
-            Range.closed(155, 200));
+            Range.closed(155, 210));
         break;
       case "Legendary":
         range = ImmutableList.of(
-            Range.closed(245, 255),
-            Range.closed(155, 170),
-            Range.closed(15, 30));
+            Range.closed(235, 255),
+            Range.closed(145, 170),
+            Range.closed(5, 30));
         break;
       default:
         range = ImmutableList.of(
