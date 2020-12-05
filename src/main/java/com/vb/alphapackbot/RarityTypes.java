@@ -2,6 +2,10 @@ package com.vb.alphapackbot;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 
 /**
@@ -61,6 +65,12 @@ public enum RarityTypes {
     }
   }
 
+  private static final Map<String, RarityTypes> stringValues = Stream.of(values())
+      .collect(Collectors.toMap(RarityTypes::toString, x -> x));
+
+  public static Optional<RarityTypes> parse(String toParse) {
+    return Optional.ofNullable(stringValues.get(toParse));
+  }
 
   @Override
   public String toString() {

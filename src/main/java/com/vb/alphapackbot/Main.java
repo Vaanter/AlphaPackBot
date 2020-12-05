@@ -1,21 +1,20 @@
 package com.vb.alphapackbot;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
+import java.util.Timer;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
+import net.dv8tion.jda.api.entities.Activity;
 
-@Command(name = "AlphaPackBot",
-    description = "Bot for counting various types from packs in R6 Siege",
-    mixinStandardHelpOptions = true)
-public class Main implements Runnable {
+public class Main {
   static {
     System.setProperty(
         "flogger.backend_factory", "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
@@ -31,37 +30,35 @@ public class Main implements Runnable {
       "toggle-database");
   private JDA mainJda;
 
-  @Parameters(index = "0", description = "Token used for Bot initialisation", arity = "1")
-  String token;
-
   public static void main(String[] args) {
-    new CommandLine(new Main()).execute(args);
+    Main main = new Main();
+    System.exit(main.start());
   }
 
-  @Override
-  public void run() {
+  public int start() {
+    char[] token = System.console().readPassword("Enter bot token: ");
     MessageHandler messageHandler = new MessageHandler();
     Stopwatch stopwatch = Stopwatch.createStarted();
-    Thread mainBotThread = new Thread(() -> {
-      JDABuilder jda = JDABuilder
-          .createLight(token)
-          .addEventListeners(messageHandler);
-      try {
-        mainJda = jda.build();
-        mainJda.awaitReady();
-      } catch (LoginException e) {
-        log.atSevere()
-            .withCause(e)
-            .log("Invalid token!");
-        System.exit(1);
-      } catch (InterruptedException e) {
-        log.atSevere()
-            .withCause(e)
-            .log("Interrupted while getting ready!");
-        System.exit(2);
-      }
-    }, "mainBotThread");
-    mainBotThread.start();
+//    Thread mainBotThread = new Thread(() -> {
+    JDABuilder jda = JDABuilder
+        .createLight(String.valueOf(token))
+        .addEventListeners(messageHandler);
+    jda.setActivity(Activity.playing(""));
+    Arrays.fill(token, ' ');
+    try {
+      mainJda = jda.build();
+      mainJda.awaitReady();
+    } catch (LoginException e) {
+      log.atSevere()
+          .withCause(e)
+          .log("Invalid token!");
+      return 1;
+    } catch (InterruptedException e) {
+      log.atSevere()
+          .withCause(e)
+          .log("Interrupted while getting ready!");
+      return 2;
+    }
     try (Scanner scanner = new Scanner(System.in, Charsets.UTF_8)) {
       //Commands
       while (true) {
@@ -90,6 +87,15 @@ public class Main implements Runnable {
           System.out.println("Is database enabled: " + properties.isDatabaseEnabled());
         } else if (command.equalsIgnoreCase("status")) {
           System.out.println(properties.toString());
+        } else if (command.equalsIgnoreCase("set-status")) {
+          List<String> commandParts = Splitter.on(" ")
+              .limit(2)
+              .omitEmptyStrings()
+              .trimResults()
+              .splitToList(command);
+          if (commandParts.size() > 2) {
+            mainJda.getPresence().setActivity(Activity.listening(commandParts.get(1)));
+          }
         } else {
           System.out.println("Commands:");
           commands.forEach(System.out::println);
@@ -98,6 +104,6 @@ public class Main implements Runnable {
       }
     }
     mainJda.shutdownNow();
-    System.exit(0);
+    return 0;
   }
 }
