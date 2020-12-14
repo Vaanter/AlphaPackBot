@@ -6,6 +6,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Contains available commands for processor.
+ */
 public enum ProcessingCommand {
   COUNT("count"),
   LAST("last"),

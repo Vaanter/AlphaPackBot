@@ -5,6 +5,9 @@ import java.util.EnumMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * POJO holding IDs of author, channel and counts of rarities.
+ */
 public class UserData {
   private final EnumMap<RarityTypes, Integer> rarityData;
   private final String authorId;
@@ -38,6 +41,10 @@ public class UserData {
     return authorId;
   }
 
+  /** Increases count of specified rarity by 1.
+   *
+   * @param rarity rarity to increment
+   */
   void increment(RarityTypes rarity) {
     rarityData.replace(rarity, rarityData.get(rarity) + 1);
   }

@@ -8,7 +8,7 @@ plugins {
 
 mainClassName = "com.vb.alphapackbot.Main"
 
-version "2.3.0"
+version "2.3.3"
 group "com.vb.alphapackbot"
 
 repositories {
@@ -18,7 +18,6 @@ repositories {
 
 dependencies {
   annotationProcessor 'org.projectlombok:lombok:1.18.16'
-
   compileOnly 'org.projectlombok:lombok:1.18.16'
   implementation ('net.dv8tion:JDA:4.2.0_222') {
     exclude module: 'opus-java'

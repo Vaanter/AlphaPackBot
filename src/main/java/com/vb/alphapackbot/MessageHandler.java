@@ -1,16 +1,8 @@
 package com.vb.alphapackbot;
 
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.Firestore;
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import com.google.firebase.cloud.FirestoreClient;
 import com.google.mu.util.concurrent.Retryer;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,9 +22,11 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Handles received messages and starts processor.
+ */
 public class MessageHandler extends ListenerAdapter {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
-  private static final String CHANNEL = "pack";
   private static final int MAX_RETRIEVE_SIZE = 100;
   private static final String invalidCommandMessage = "\nInvalid command, available commands: \n"
       + "count - Counts all rarities\n"
@@ -41,39 +35,26 @@ public class MessageHandler extends ListenerAdapter {
   private static final String invalidRarity = "\n Invalid rarity, acceptable rarities: "
       + "Common, Uncommon, Rare, Epic, Legendary, Unknown";
 
-  private final Properties properties = Properties.getInstance();
+  private static final Properties properties = Properties.getInstance();
   private final ExecutorService executor = Executors.newFixedThreadPool(10);
-  private Firestore db;
 
-  MessageHandler() {
-    try (InputStream serviceAccount = new FileInputStream("serviceAccount.json")) {
-      GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
-      FirebaseOptions options = FirebaseOptions.builder()
-          .setCredentials(credentials)
-          .build();
-      FirebaseApp.initializeApp(options);
-
-      db = FirestoreClient.getFirestore();
-      log.atInfo().log("Database connection established successfully.");
-    } catch (IOException e) {
-      properties.setDatabaseEnabled(false);
-      log.atSevere()
-          .log("Unable to establish connection to database! Disabling database functions.");
-    }
+  public MessageHandler() {
   }
 
   @Override
   public void onGuildMessageReceived(@Nonnull final GuildMessageReceivedEvent event) {
-    if (!event.getChannel().getName().contains(CHANNEL) || event.getAuthor().isBot()) {
+    if (event.getAuthor().isBot()) {
       return;
     }
     if (event.getMessage().getContentStripped().toLowerCase(Locale.getDefault()).startsWith("*pack")
         && properties.isBotEnabled()) {
       Optional<ProcessingCommand> command = parseCommand(event.getMessage().getContentStripped());
       if (command.isEmpty()) {
-        event.getMessage()
-            .reply(invalidCommandMessage)
-            .complete();
+        if (properties.isPrintingEnabled()) {
+          event.getMessage()
+              .reply(invalidCommandMessage)
+              .complete();
+        }
         return;
       }
       ArrayList<Message> messages = getMessages(event.getChannel());
@@ -89,7 +70,7 @@ public class MessageHandler extends ListenerAdapter {
           mentions.add(event.getAuthor());
         }
         for (int i = 0; i < mentions.size(); i++) {
-          Processor processor = Processor.builder(messages, event, command.get()).db(db).build();
+          Processor processor = Processor.builder(messages, event, command.get()).build();
           synchronized (properties.getProcessingCounter()) {
             properties.getProcessingCounter().increment();
           }
@@ -98,9 +79,11 @@ public class MessageHandler extends ListenerAdapter {
       } else {
         Optional<RarityTypes> rarity = parseRarity(event.getMessage().getContentStripped());
         if (rarity.isEmpty()) {
-          event.getMessage()
-              .reply(invalidRarity)
-              .complete();
+          if (properties.isPrintingEnabled()) {
+            event.getMessage()
+                .reply(invalidRarity)
+                .complete();
+          }
           return;
         }
         Processor processor = Processor.builder(messages, event, command.get())
@@ -114,6 +97,13 @@ public class MessageHandler extends ListenerAdapter {
     }
   }
 
+  /**
+   * Parses command from second position (indexed from 1) in message.
+   * <p>Available commands are specified in {@link ProcessingCommand}</p>
+   *
+   * @param message String representation of message.
+   * @return {@link Optional} of {@link ProcessingCommand} or empty if invalid / none command is passed.
+   */
   private Optional<ProcessingCommand> parseCommand(@NotNull String message) {
     List<String> messageParts = Splitter.on(" ").splitToList(message);
     if (messageParts.size() > 1) {
@@ -122,6 +112,13 @@ public class MessageHandler extends ListenerAdapter {
     return Optional.empty();
   }
 
+  /**
+   * Parses rarity from third position (indexed from 1) in message.
+   * <p>Available rarities are specified in {@link RarityTypes}</p>
+   *
+   * @param message String representation of message.
+   * @return {@link Optional} of {@link RarityTypes} or empty if invalid / none rarity is passed.
+   */
   private Optional<RarityTypes> parseRarity(@NotNull String message) {
     List<String> messageParts = Splitter.on(" ").splitToList(message);
     if (messageParts.size() > 2) {

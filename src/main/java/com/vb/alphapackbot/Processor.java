@@ -3,9 +3,7 @@ package com.vb.alphapackbot;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
@@ -29,6 +27,9 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Executes specified process.
+ */
 public class Processor implements Runnable {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private static final Properties properties = Properties.getInstance();
@@ -36,7 +37,6 @@ public class Processor implements Runnable {
   private final List<Message> messages;
   private final GuildMessageReceivedEvent event;
   private final ProcessingCommand command;
-  private final Firestore db;
   private final RarityTypes requestedRarity;
 
   private volatile boolean isProcessing = true;
@@ -44,7 +44,7 @@ public class Processor implements Runnable {
   public Processor(final List<Message> messages,
                    final GuildMessageReceivedEvent event,
                    final ProcessingCommand command,
-                   final Firestore db, final RarityTypes requestedRarity) {
+                   final RarityTypes requestedRarity) {
     this.requestedRarity = requestedRarity;
 
     this.messages = messages.stream()
@@ -53,7 +53,6 @@ public class Processor implements Runnable {
         .collect(Collectors.toList());
     this.event = event;
     this.command = command;
-    this.db = db;
   }
 
   public static ProcessorBuilder builder(List<Message> messages,
@@ -90,7 +89,7 @@ public class Processor implements Runnable {
 
 
   /**
-   * Sends typing action while at least one processing is in progress
+   * Sends typing action while this runnable is running
    *
    * @param textChannel channel to which action is sent
    */
@@ -108,11 +107,26 @@ public class Processor implements Runnable {
     typingThread.start();
   }
 
+  /**
+   * Finds first occurrence of rarity
+   *
+   * @param messages list of messages in which the rarity is searched
+   * @return {@link Optional} of message (empty if specified rarity is not present)
+   */
   private Optional<Message> getOccurrence(List<Message> messages) {
     for (Message message : messages) {
-      RarityTypes rarity = getRarity(message.getAttachments().get(0).getUrl());
-      if (rarity == requestedRarity) {
-        return Optional.of(message);
+      try {
+        String messageUrl = message.getAttachments().get(0).getUrl();
+        BufferedImage image = getImage(messageUrl);
+        RarityTypes rarity = getRarity(image);
+        if (rarity == RarityTypes.UNKNOWN) {
+          log.atInfo().log("Unknown rarity in %s!", messageUrl);
+        }
+        if (rarity == requestedRarity) {
+          return Optional.of(message);
+        }
+      } catch (IOException e) {
+        log.atSevere().log("Exception getting an image!");
       }
     }
     return Optional.empty();
@@ -121,7 +135,7 @@ public class Processor implements Runnable {
   /**
    * Obtains all rarity data for specific user.
    * <p></p>
-   * Check {@link Processor#getRarity(String)}, {@link Processor#printRarityPerUser(UserData, TextChannel)}
+   * Check {@link Processor#getRarity(BufferedImage)}, {@link Processor#loadUserData(String, String)}
    *
    * @param messages  Messages from which rarities will be extracted
    * @param authorId  ID of request message author
@@ -131,8 +145,7 @@ public class Processor implements Runnable {
                                       @NotNull String authorId,
                                       @NotNull String channelId) {
     System.out.println("Getting rarity per user...");
-
-    UserData userData = loadFromDatabase(authorId, channelId);
+    UserData userData = loadUserData(authorId, channelId);
     int processedMessageCount = userData
         .getRarityData()
         .values()
@@ -144,8 +157,17 @@ public class Processor implements Runnable {
 
       double processed = 0;
       for (Message message : messages) {
-        RarityTypes rarity = getRarity(message.getAttachments().get(0).getUrl());
-        userData.increment(rarity);
+        try {
+          String messageUrl = message.getAttachments().get(0).getUrl();
+          BufferedImage image = getImage(messageUrl);
+          RarityTypes rarity = getRarity(image);
+          if (rarity == RarityTypes.UNKNOWN) {
+            log.atInfo().log("Unknown rarity in %s!", messageUrl);
+          }
+          userData.increment(rarity);
+        } catch (IOException e) {
+          log.atSevere().withCause(e).log("Exception getting image!");
+        }
         processed += 1;
         double percentage = (processed / messages.size()) * 100;
         System.out.println("Processed: " + String.format("%.2f", percentage) + "%");
@@ -161,7 +183,7 @@ public class Processor implements Runnable {
    */
   private void saveToDatabase(@NotNull UserData userData) {
     String docId = userData.getAuthorId() + "_" + userData.getChannelId();
-    final DocumentReference docRef = db.collection("user_data").document(docId);
+    final DocumentReference docRef = properties.getDb().collection("user_data").document(docId);
     HashMap<String, Object> data = new HashMap<>();
     for (Map.Entry<RarityTypes, Integer> rarity : userData.getRarityData().entrySet()) {
       data.put(rarity.getKey().toString(), rarity.getValue());
@@ -217,6 +239,11 @@ public class Processor implements Runnable {
     }
   }
 
+  /**
+   * Prints occurrence to console and sends message to channel if enabled.
+   *
+   * @param message message of the occurrence
+   */
   private void printOccurrence(@NotNull Message message) {
     OffsetDateTime timeCreated = message.getTimeCreated();
     String reply = "You opened your " + command.toString() + " "
@@ -225,7 +252,7 @@ public class Processor implements Runnable {
         + " at " + timeCreated.getHour() + ":" + timeCreated.getMinute() + "\n"
         + "link: " + message.getJumpUrl() + ".";
 
-    System.out.println(message);
+    System.out.println(reply);
 
     if (properties.isPrintingEnabled()) {
       event.getMessage().reply(reply).complete();
@@ -240,10 +267,10 @@ public class Processor implements Runnable {
    * @param channelId id of channel
    * @return {@link Optional} of user data
    */
-  private UserData loadFromDatabase(String authorId, String channelId) {
+  private UserData loadUserData(String authorId, String channelId) {
     if (properties.isDatabaseEnabled()) {
       String docId = authorId + "_" + channelId;
-      DocumentReference docRef = db.collection("user_data").document(docId);
+      DocumentReference docRef = properties.getDb().collection("user_data").document(docId);
       //asynchronous
       ApiFuture<DocumentSnapshot> future = docRef.get();
       try {
@@ -257,10 +284,7 @@ public class Processor implements Runnable {
               rarity.put(type, databaseObject.intValue());
             }
           }
-          return new UserData(
-              rarity,
-              Preconditions.checkNotNull(document.getString("authorId")),
-              Preconditions.checkNotNull(document.getString("channelId")));
+          return new UserData(rarity, authorId, channelId);
         }
       } catch (InterruptedException | ExecutionException e) {
         log.atSevere()
@@ -271,40 +295,37 @@ public class Processor implements Runnable {
     return new UserData(authorId, channelId);
   }
 
+  private BufferedImage getImage(@NotNull String imageUrl) throws IOException {
+    try (InputStream in = new URL(imageUrl).openStream()) {
+      return ImageIO.read(in);
+    }
+  }
+
   /**
    * Obtains RarityType value from image.
    *
-   * @param imageUrl Url of image to be processed
+   * @param image image to be processed
    * @return Rarity from {@link RarityTypes}
    */
   @NotNull
-  private RarityTypes getRarity(@NotNull String imageUrl) {
-    try (InputStream in = new URL(imageUrl).openStream()) {
-      BufferedImage image = ImageIO.read(in);
-      int width = (int) (image.getWidth() * 0.489583); //~940 @ FHD
-      int height = (int) (image.getHeight() * 0.83333); //~900 @ FHD
-      Color color = new Color(image.getRGB(width, height));
-      int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
-
-      for (RarityTypes rarity : RarityTypes.values()) {
-        ImmutableList<Range<Integer>> range = rarity.getRange();
-        int hitCounter = 0;
-        for (int i = 0; i < 3; i++) {
-          if (range.get(i).contains(colors[i])) {
-            hitCounter += 1;
-          }
-        }
-        if (hitCounter == 3) {
-          return rarity;
+  private RarityTypes getRarity(@NotNull BufferedImage image) {
+    int width = (int) (image.getWidth() * 0.489583); //~940 @ FHD
+    int height = (int) (image.getHeight() * 0.83333); //~900 @ FHD
+    Color color = new Color(image.getRGB(width, height));
+    int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
+    for (RarityTypes rarity : RarityTypes.values()) {
+      ImmutableList<Range<Integer>> range = rarity.getRange();
+      int hitCounter = 0;
+      for (int i = 0; i < 3; i++) {
+        if (range.get(i).contains(colors[i])) {
+          hitCounter += 1;
         }
       }
-      log.atInfo().log("Unknown rarity in %s!", imageUrl);
-      log.atInfo().log("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
-    } catch (IOException e) {
-      log.atSevere()
-          .withCause(e)
-          .log("Exception getting image!");
+      if (hitCounter == 3) {
+        return rarity;
+      }
     }
+    log.atInfo().log("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
     return RarityTypes.UNKNOWN;
   }
 
@@ -312,9 +333,7 @@ public class Processor implements Runnable {
     private final List<Message> messages;
     private final GuildMessageReceivedEvent event;
     private final ProcessingCommand command;
-    private Firestore db = null;
     private RarityTypes requestedRarity = null;
-
 
     public ProcessorBuilder(List<Message> messages,
                             GuildMessageReceivedEvent event,
@@ -324,18 +343,13 @@ public class Processor implements Runnable {
       this.command = command;
     }
 
-    public ProcessorBuilder db(Firestore db) {
-      this.db = db;
-      return this;
-    }
-
     public ProcessorBuilder requestedRarity(RarityTypes requestedRarity) {
       this.requestedRarity = requestedRarity;
       return this;
     }
 
     public Processor build() {
-      return new Processor(messages, event, command, db, requestedRarity);
+      return new Processor(messages, event, command, requestedRarity);
     }
   }
 }

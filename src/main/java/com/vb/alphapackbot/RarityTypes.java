@@ -9,7 +9,7 @@ import java.util.stream.Stream;
 import lombok.Getter;
 
 /**
- * Types of rarities.
+ * Contains available rarity types and special unknown type.
  */
 public enum RarityTypes {
   COMMON("Common"),
@@ -69,7 +69,7 @@ public enum RarityTypes {
       .collect(Collectors.toMap(RarityTypes::toString, x -> x));
 
   public static Optional<RarityTypes> parse(String toParse) {
-    return Optional.ofNullable(stringValues.get(toParse));
+    return Optional.ofNullable(stringValues.getOrDefault(toParse, null));
   }
 
   @Override

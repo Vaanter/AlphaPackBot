@@ -1,20 +1,24 @@
 package com.vb.alphapackbot;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Timer;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
 
+
+/**
+ * Main Class
+ */
 public class Main {
+  // Required for flogger to use sfl4j backend
   static {
     System.setProperty(
         "flogger.backend_factory", "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
@@ -27,23 +31,32 @@ public class Main {
       "status",
       "uptime",
       "toggle-bot",
-      "toggle-database");
+      "toggle-database",
+      "set-status <status>");
   private JDA mainJda;
 
   public static void main(String[] args) {
     Main main = new Main();
-    System.exit(main.start());
+    int result = main.initJda();
+    if (result > 0) {
+      System.exit(result);
+    }
+    main.commandLoop();
   }
 
-  public int start() {
+  /** Initializes JDA with token.
+   *  Safely asks for bot token and uses this token in JDA builder.
+   *  Then attempts to build the JDA.
+   * @return 0 if JDA starts normally,
+   * 1 if token is not valid,
+   * 2 if thread gets interrupted while JDA is connecting.
+   */
+  public int initJda() {
     char[] token = System.console().readPassword("Enter bot token: ");
     MessageHandler messageHandler = new MessageHandler();
-    Stopwatch stopwatch = Stopwatch.createStarted();
-//    Thread mainBotThread = new Thread(() -> {
     JDABuilder jda = JDABuilder
         .createLight(String.valueOf(token))
         .addEventListeners(messageHandler);
-    jda.setActivity(Activity.playing(""));
     Arrays.fill(token, ' ');
     try {
       mainJda = jda.build();
@@ -59,8 +72,15 @@ public class Main {
           .log("Interrupted while getting ready!");
       return 2;
     }
-    try (Scanner scanner = new Scanner(System.in, Charsets.UTF_8)) {
-      //Commands
+    return 0;
+  }
+
+  /** Starts the command loop.
+   * Loops until exit command is issued. Processes various commands for bot management.
+   */
+  public void commandLoop() {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    try (Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8)) {
       while (true) {
         String command = scanner.nextLine();
         if (command.equalsIgnoreCase("exit")) {
@@ -87,14 +107,17 @@ public class Main {
           System.out.println("Is database enabled: " + properties.isDatabaseEnabled());
         } else if (command.equalsIgnoreCase("status")) {
           System.out.println(properties.toString());
-        } else if (command.equalsIgnoreCase("set-status")) {
+        } else if (command.toLowerCase().startsWith("set-status")) {
           List<String> commandParts = Splitter.on(" ")
               .limit(2)
               .omitEmptyStrings()
               .trimResults()
               .splitToList(command);
-          if (commandParts.size() > 2) {
-            mainJda.getPresence().setActivity(Activity.listening(commandParts.get(1)));
+          if (commandParts.size() > 1) {
+            System.out.println(commandParts.get(1));
+            mainJda.getPresence().setActivity(Activity.playing(commandParts.get(1)));
+          } else {
+            System.out.println("Status must not be empty!");
           }
         } else {
           System.out.println("Commands:");
@@ -104,6 +127,5 @@ public class Main {
       }
     }
     mainJda.shutdownNow();
-    return 0;
   }
 }
