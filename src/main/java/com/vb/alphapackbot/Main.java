@@ -31,43 +31,59 @@ import net.dv8tion.jda.api.entities.Activity;
 
 
 /**
- * Main Class
+ * Main Class.
  */
 public class Main {
   // Required for flogger to use sfl4j backend
   static {
-    System.setProperty(
-        "flogger.backend_factory", "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
+    System.setProperty("flogger.backend_factory",
+        "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
   }
 
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
-  private final Properties properties = Properties.getInstance();
-  private final ImmutableSet<String> commands = ImmutableSet.of(
+  private static final Properties properties = Properties.getInstance();
+  private static final ImmutableSet<String> commands = ImmutableSet.of(
       "exit",
       "status",
       "uptime",
       "toggle-bot",
       "toggle-database",
       "set-status <status>");
-  private JDA mainJda;
+  private static JDA mainJda;
 
+  // Registers shutdown hook to cleanly shutdown the JDA
+  static {
+    Runnable cleanup = () -> {
+      if (mainJda != null) {
+        mainJda.shutdownNow();
+      }
+    };
+    Runtime.getRuntime().addShutdownHook(new Thread(cleanup));
+  }
+
+  /**
+   * Entry point of the app. Initializes the JDA and if successful, starts the command loop.
+   *
+   * @param args Standard main argument.
+   */
   public static void main(String[] args) {
-    Main main = new Main();
-    int result = main.initJda();
+    int result = initJda();
     if (result > 0) {
       System.exit(result);
     }
-    main.commandLoop();
+    commandLoop();
   }
 
-  /** Initializes JDA with token.
-   *  Safely asks for bot token and uses this token in JDA builder.
-   *  Then attempts to build the JDA.
+  /**
+   * Initializes JDA with token.
+   * Safely asks for bot token and uses this token in JDA builder.
+   * Then attempts to build the JDA.
+   *
    * @return 0 if JDA starts normally,
-   * 1 if token is not valid,
-   * 2 if thread gets interrupted while JDA is connecting.
+   *     1 if token is not valid,
+   *     2 if thread gets interrupted while JDA is connecting.
    */
-  public int initJda() {
+  public static int initJda() {
     char[] token = System.console().readPassword("Enter bot token: ");
     MessageHandler messageHandler = new MessageHandler();
     JDABuilder jda = JDABuilder
@@ -91,10 +107,11 @@ public class Main {
     return 0;
   }
 
-  /** Starts the command loop.
+  /**
+   * Starts the command loop.
    * Loops until exit command is issued. Processes various commands for bot management.
    */
-  public void commandLoop() {
+  public static void commandLoop() {
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8)) {
       while (true) {
@@ -142,6 +159,7 @@ public class Main {
         }
       }
     }
-    mainJda.shutdownNow();
+    System.out.println("Shutting down.");
+    System.exit(0);
   }
 }

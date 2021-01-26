@@ -28,19 +28,16 @@ import java.util.concurrent.atomic.LongAdder;
 import lombok.Getter;
 import lombok.Setter;
 
-
 /**
  * Static properties class.
  */
 @Getter
 @Setter
 public class Properties {
-  private final static FluentLogger log = FluentLogger.forEnclosingClass();
-  private final static Properties instance = new Properties();
-  private Firestore db = null;
-
+  private static final FluentLogger log = FluentLogger.forEnclosingClass();
+  private static final Properties instance = new Properties();
   private final LongAdder processingCounter = new LongAdder();
-
+  private Firestore db = null;
   /**
    * Enables/disables use of database.
    */
@@ -66,9 +63,8 @@ public class Properties {
       FirebaseApp.initializeApp(options);
       db = FirestoreClient.getFirestore();
       log.atInfo().log("Database connection established successfully.");
-    } catch (
-        IOException e) {
-      instance.setDatabaseEnabled(false);
+    } catch (IOException e) {
+      databaseEnabled = false;
       log.atSevere()
           .log("Unable to establish connection to database! Disabling database functions.");
     }
@@ -80,9 +76,9 @@ public class Properties {
 
   @Override
   public String toString() {
-    return "Is bot enabled: " + isBotEnabled +
-        "\nRequests being processed: " + processingCounter.longValue() +
-        "\nIs database enabled: " + databaseEnabled +
-        "\nIs printing enabled: " + isPrintingEnabled;
+    return "Is bot enabled: " + isBotEnabled
+        + "\nRequests being processed: " + processingCounter.longValue()
+        + "\nIs database enabled: " + databaseEnabled
+        + "\nIs printing enabled: " + isPrintingEnabled;
   }
 }

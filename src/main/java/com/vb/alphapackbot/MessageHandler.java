@@ -19,6 +19,8 @@ package com.vb.alphapackbot;
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
 import com.google.mu.util.concurrent.Retryer;
+import com.vb.alphapackbot.commands.CountCommand;
+import com.vb.alphapackbot.commands.OccurrenceCommand;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -86,11 +88,11 @@ public class MessageHandler extends ListenerAdapter {
           mentions.add(event.getAuthor());
         }
         for (int i = 0; i < mentions.size(); i++) {
-          Processor processor = Processor.builder(messages, event, command.get()).build();
+          CountCommand countCommand = new CountCommand(messages, event, command.get());
           synchronized (properties.getProcessingCounter()) {
             properties.getProcessingCounter().increment();
           }
-          executor.execute(processor);
+          executor.execute(countCommand);
         }
       } else {
         Optional<RarityTypes> rarity = parseRarity(event.getMessage().getContentStripped());
@@ -102,13 +104,12 @@ public class MessageHandler extends ListenerAdapter {
           }
           return;
         }
-        Processor processor = Processor.builder(messages, event, command.get())
-            .requestedRarity(rarity.get())
-            .build();
+        OccurrenceCommand occurrenceCommand =
+            new OccurrenceCommand(messages, event, command.get(), rarity.get());
         synchronized (properties.getProcessingCounter()) {
           properties.getProcessingCounter().increment();
         }
-        executor.execute(processor);
+        executor.execute(occurrenceCommand);
       }
     }
   }
@@ -118,28 +119,13 @@ public class MessageHandler extends ListenerAdapter {
    * <p>Available commands are specified in {@link ProcessingCommand}</p>
    *
    * @param message String representation of message.
-   * @return {@link Optional} of {@link ProcessingCommand} or empty if invalid / none command is passed.
+   * @return {@link Optional} of {@link ProcessingCommand}
+   *     or empty if invalid / none command is passed.
    */
   private Optional<ProcessingCommand> parseCommand(@NotNull String message) {
     List<String> messageParts = Splitter.on(" ").splitToList(message);
     if (messageParts.size() > 1) {
       return ProcessingCommand.parse(messageParts.get(1).toLowerCase());
-    }
-    return Optional.empty();
-  }
-
-  /**
-   * Parses rarity from third position (indexed from 1) in message.
-   * <p>Available rarities are specified in {@link RarityTypes}</p>
-   *
-   * @param message String representation of message.
-   * @return {@link Optional} of {@link RarityTypes} or empty if invalid / none rarity is passed.
-   */
-  private Optional<RarityTypes> parseRarity(@NotNull String message) {
-    List<String> messageParts = Splitter.on(" ").splitToList(message);
-    if (messageParts.size() > 2) {
-      String messageRarity = StringUtils.capitalize(messageParts.get(2).toLowerCase());
-      return RarityTypes.parse(messageRarity);
     }
     return Optional.empty();
   }
@@ -175,5 +161,21 @@ public class MessageHandler extends ListenerAdapter {
       amount -= numToRetrieve;
     }
     return messages;
+  }
+
+  /**
+   * Parses rarity from third position (indexed from 1) in message.
+   * <p>Available rarities are specified in {@link RarityTypes}</p>
+   *
+   * @param message String representation of message.
+   * @return {@link Optional} of {@link RarityTypes} or empty if invalid / none rarity is passed.
+   */
+  private Optional<RarityTypes> parseRarity(@NotNull String message) {
+    List<String> messageParts = Splitter.on(" ").splitToList(message);
+    if (messageParts.size() > 2) {
+      String messageRarity = StringUtils.capitalize(messageParts.get(2).toLowerCase());
+      return RarityTypes.parse(messageRarity);
+    }
+    return Optional.empty();
   }
 }

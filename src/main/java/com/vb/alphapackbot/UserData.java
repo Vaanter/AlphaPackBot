@@ -29,14 +29,14 @@ public class UserData {
   private final String authorId;
   private final String channelId;
 
-  UserData(@NotNull String authorId,
-           @NotNull String channelId) {
+  public UserData(@NotNull String authorId,
+                  @NotNull String channelId) {
     this(null, authorId, channelId);
   }
 
-  UserData(@Nullable EnumMap<RarityTypes, Integer> rarityData,
-           @NotNull String authorId,
-           @NotNull String channelId) {
+  public UserData(@Nullable EnumMap<RarityTypes, Integer> rarityData,
+                  @NotNull String authorId,
+                  @NotNull String channelId) {
     if (rarityData == null) {
       ImmutableMap.Builder<RarityTypes, Integer> builder = ImmutableMap.builderWithExpectedSize(6);
       for (RarityTypes rarityType : RarityTypes.values()) {
@@ -49,23 +49,24 @@ public class UserData {
     this.rarityData = rarityData;
   }
 
-  EnumMap<RarityTypes, Integer> getRarityData() {
+  public EnumMap<RarityTypes, Integer> getRarityData() {
     return rarityData;
   }
 
-  String getAuthorId() {
+  public String getAuthorId() {
     return authorId;
   }
 
-  /** Increases count of specified rarity by 1.
+  /**
+   * Increases count of specified rarity by 1.
    *
    * @param rarity rarity to increment
    */
-  void increment(RarityTypes rarity) {
+  public void increment(RarityTypes rarity) {
     rarityData.replace(rarity, rarityData.get(rarity) + 1);
   }
 
-  String getChannelId() {
+  public String getChannelId() {
     return channelId;
   }
 }
