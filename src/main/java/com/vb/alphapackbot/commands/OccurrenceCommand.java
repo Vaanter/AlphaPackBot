@@ -18,7 +18,7 @@ package com.vb.alphapackbot.commands;
 
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
-import com.vb.alphapackbot.ProcessingCommand;
+import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.RarityTypes;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class OccurrenceCommand extends AbstractCommand {
 
   public OccurrenceCommand(final List<Message> messages,
                            final GuildMessageReceivedEvent event,
-                           final ProcessingCommand command,
+                           final Commands command,
                            final RarityTypes requestedRarity) {
     super(messages, event, command);
     this.requestedRarity = requestedRarity;
@@ -44,7 +44,7 @@ public class OccurrenceCommand extends AbstractCommand {
   @Override
   public void run() {
     Optional<Message> result;
-    if (command == ProcessingCommand.FIRST) {
+    if (command == Commands.FIRST) {
       result = getOccurrence(Lists.reverse(messages));
     } else {
       result = getOccurrence(messages);

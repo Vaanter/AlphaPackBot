@@ -21,7 +21,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.WriteResult;
 import com.google.common.flogger.FluentLogger;
-import com.vb.alphapackbot.ProcessingCommand;
+import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.UserData;
 import java.awt.image.BufferedImage;
@@ -42,7 +42,7 @@ public class CountCommand extends AbstractCommand {
 
   public CountCommand(final List<Message> messages,
                       final GuildMessageReceivedEvent event,
-                      final ProcessingCommand command) {
+                      final Commands command) {
     super(messages, event, command);
   }
 

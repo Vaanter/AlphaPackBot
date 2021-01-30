@@ -19,7 +19,7 @@ package com.vb.alphapackbot.commands;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
-import com.vb.alphapackbot.ProcessingCommand;
+import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
 import java.awt.Color;
@@ -43,16 +43,17 @@ public abstract class AbstractCommand implements Runnable {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   final List<Message> messages;
   final GuildMessageReceivedEvent event;
-  final ProcessingCommand command;
+  final Commands command;
   volatile boolean isProcessing = true;
 
   AbstractCommand(final List<Message> messages,
                   final GuildMessageReceivedEvent event,
-                  final ProcessingCommand command) {
+                  final Commands command) {
 
     this.messages = messages.stream()
         .filter(x -> !x.getAttachments().isEmpty())
         .filter(x -> x.getAuthor().getId().equals(event.getAuthor().getId()))
+        .filter(m -> m.getContentRaw().contains("*ignored"))
         .collect(Collectors.toList());
     this.event = event;
     this.command = command;

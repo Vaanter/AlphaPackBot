@@ -23,23 +23,23 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Contains available commands for processor.
+ * Contains available commands.
  */
-public enum ProcessingCommand {
+public enum Commands {
   COUNT("count"),
   LAST("last"),
   FIRST("first");
 
-  private static final Map<String, ProcessingCommand> stringValues = Stream.of(values())
-      .collect(Collectors.toMap(ProcessingCommand::toString, x -> x));
+  private static final Map<String, Commands> stringValues = Stream.of(values())
+      .collect(Collectors.toMap(Commands::toString, x -> x));
 
   private final String command;
 
-  ProcessingCommand(final String command) {
+  Commands(final String command) {
     this.command = command;
   }
 
-  public static Optional<ProcessingCommand> parse(@Nullable String toParse) {
+  public static Optional<Commands> parse(@Nullable String toParse) {
     return Optional.ofNullable(stringValues.getOrDefault(toParse, null));
   }
 

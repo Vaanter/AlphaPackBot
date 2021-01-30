@@ -66,7 +66,7 @@ public class MessageHandler extends ListenerAdapter {
     }
     if (event.getMessage().getContentStripped().toLowerCase(Locale.getDefault()).startsWith("*pack")
         && properties.isBotEnabled()) {
-      Optional<ProcessingCommand> command = parseCommand(event.getMessage().getContentStripped());
+      Optional<Commands> command = parseCommand(event.getMessage().getContentStripped());
       if (command.isEmpty()) {
         if (properties.isPrintingEnabled()) {
           event.getMessage()
@@ -76,7 +76,7 @@ public class MessageHandler extends ListenerAdapter {
         return;
       }
       ArrayList<Message> messages = getMessages(event.getChannel());
-      if (command.get() == ProcessingCommand.COUNT) {
+      if (command.get() == Commands.COUNT) {
         HashSet<User> mentions = new HashSet<>();
         event.getGuild()
             .getMembersWithRoles(event.getMessage().getMentionedRoles())
@@ -116,16 +116,16 @@ public class MessageHandler extends ListenerAdapter {
 
   /**
    * Parses command from second position (indexed from 1) in message.
-   * <p>Available commands are specified in {@link ProcessingCommand}</p>
+   * <p>Available commands are specified in {@link Commands}</p>
    *
    * @param message String representation of message.
-   * @return {@link Optional} of {@link ProcessingCommand}
+   * @return {@link Optional} of {@link Commands}
    *     or empty if invalid / none command is passed.
    */
-  private Optional<ProcessingCommand> parseCommand(@NotNull String message) {
+  private Optional<Commands> parseCommand(@NotNull String message) {
     List<String> messageParts = Splitter.on(" ").splitToList(message);
     if (messageParts.size() > 1) {
-      return ProcessingCommand.parse(messageParts.get(1).toLowerCase());
+      return Commands.parse(messageParts.get(1).toLowerCase());
     }
     return Optional.empty();
   }
