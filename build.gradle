@@ -24,7 +24,7 @@ plugins {
 
 mainClassName = "com.vb.alphapackbot.Main"
 
-version "2.5.1"
+version "2.5.2"
 group "com.vb.alphapackbot"
 
 repositories {

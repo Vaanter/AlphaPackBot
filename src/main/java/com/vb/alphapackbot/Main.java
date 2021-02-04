@@ -136,7 +136,9 @@ public class Main {
           properties.setBotEnabled(!properties.isBotEnabled());
           System.out.println("Is bot enabled: " + properties.isBotEnabled());
         } else if (command.equalsIgnoreCase("toggle-database")) {
-          properties.setDatabaseEnabled(!properties.isDatabaseEnabled());
+          if (properties.getDb() != null) {
+            properties.setDatabaseEnabled(!properties.isDatabaseEnabled());
+          }
           System.out.println("Is database enabled: " + properties.isDatabaseEnabled());
         } else if (command.equalsIgnoreCase("status")) {
           System.out.println(properties.toString());
