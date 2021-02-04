@@ -53,7 +53,7 @@ public abstract class AbstractCommand implements Runnable {
     this.messages = messages.stream()
         .filter(x -> !x.getAttachments().isEmpty())
         .filter(x -> x.getAuthor().getId().equals(event.getAuthor().getId()))
-        .filter(m -> m.getContentRaw().contains("*ignored"))
+        .filter(m -> !m.getContentRaw().contains("*ignored"))
         .collect(Collectors.toList());
     this.event = event;
     this.command = command;
