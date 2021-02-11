@@ -55,8 +55,10 @@ public class MessageHandler extends ListenerAdapter {
 
   private static final Properties properties = Properties.getInstance();
   private final ExecutorService executor = Executors.newFixedThreadPool(10);
+  private final Cache cache;
 
-  public MessageHandler() {
+  public MessageHandler(Cache cache) {
+    this.cache = cache;
   }
 
   @Override
@@ -88,7 +90,7 @@ public class MessageHandler extends ListenerAdapter {
           mentions.add(event.getAuthor());
         }
         for (int i = 0; i < mentions.size(); i++) {
-          CountCommand countCommand = new CountCommand(messages, event, command.get());
+          CountCommand countCommand = new CountCommand(messages, event, command.get(), cache);
           synchronized (properties.getProcessingCounter()) {
             properties.getProcessingCounter().increment();
           }
@@ -105,7 +107,7 @@ public class MessageHandler extends ListenerAdapter {
           return;
         }
         OccurrenceCommand occurrenceCommand =
-            new OccurrenceCommand(messages, event, command.get(), rarity.get());
+            new OccurrenceCommand(messages, event, command.get(), rarity.get(), cache);
         synchronized (properties.getProcessingCounter()) {
           properties.getProcessingCounter().increment();
         }
@@ -120,7 +122,7 @@ public class MessageHandler extends ListenerAdapter {
    *
    * @param message String representation of message.
    * @return {@link Optional} of {@link Commands}
-   *     or empty if invalid / none command is passed.
+   * or empty if invalid / none command is passed.
    */
   private Optional<Commands> parseCommand(@NotNull String message) {
     List<String> messageParts = Splitter.on(" ").splitToList(message);

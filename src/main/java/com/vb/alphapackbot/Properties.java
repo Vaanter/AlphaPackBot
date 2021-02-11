@@ -16,14 +16,6 @@
 
 package com.vb.alphapackbot;
 
-import com.google.auth.oauth2.ComputeEngineCredentials;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.Firestore;
-import com.google.common.flogger.FluentLogger;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import com.google.firebase.cloud.FirestoreClient;
-import java.io.IOException;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,14 +26,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Properties {
-  private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private static final Properties instance = new Properties();
   private final LongAdder processingCounter = new LongAdder();
-  private Firestore db = null;
+
   /**
-   * Enables/disables use of database.
+   * Enables/disables cache.
    */
-  private volatile boolean databaseEnabled = true;
+  private boolean cacheEnabled = true;
 
   /**
    * Enables/disables sending messages to Discord.
@@ -53,23 +44,6 @@ public class Properties {
    */
   private volatile boolean isBotEnabled = true;
 
-  private Properties() {
-    try {
-      GoogleCredentials credentials = ComputeEngineCredentials.getApplicationDefault();
-      FirebaseOptions options = FirebaseOptions.builder()
-          .setCredentials(credentials)
-          .setProjectId("alpha-pack-bot")
-          .build();
-      FirebaseApp.initializeApp(options);
-      db = FirestoreClient.getFirestore();
-      log.atInfo().log("Database connection established successfully.");
-    } catch (IOException e) {
-      databaseEnabled = false;
-      log.atSevere()
-          .log("Unable to establish connection to database! Disabling database functions.");
-    }
-  }
-
   public static Properties getInstance() {
     return instance;
   }
@@ -78,7 +52,7 @@ public class Properties {
   public String toString() {
     return "Is bot enabled: " + isBotEnabled
         + "\nRequests being processed: " + processingCounter.longValue()
-        + "\nIs database enabled: " + databaseEnabled
+        + "\nIs cache enabled: " + cacheEnabled
         + "\nIs printing enabled: " + isPrintingEnabled;
   }
 }

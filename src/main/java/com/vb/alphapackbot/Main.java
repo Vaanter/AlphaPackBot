@@ -34,12 +34,6 @@ import net.dv8tion.jda.api.entities.Activity;
  * Main Class.
  */
 public class Main {
-  // Required for flogger to use sfl4j backend
-  static {
-    System.setProperty("flogger.backend_factory",
-        "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
-  }
-
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private static final Properties properties = Properties.getInstance();
   private static final ImmutableSet<String> commands = ImmutableSet.of(
@@ -47,9 +41,15 @@ public class Main {
       "status",
       "uptime",
       "toggle-bot",
-      "toggle-database",
+      "toggle-cache",
       "set-status <status>");
   private static JDA mainJda;
+
+  // Required for flogger to use sfl4j backend
+  static {
+    System.setProperty("flogger.backend_factory",
+        "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
+  }
 
   // Registers shutdown hook to cleanly shutdown the JDA
   static {
@@ -67,11 +67,12 @@ public class Main {
    * @param args Standard main argument.
    */
   public static void main(String[] args) {
-    int result = initJda();
+    Cache cache = new Cache("localhost");
+    int result = initJda(cache);
     if (result > 0) {
       System.exit(result);
     }
-    commandLoop();
+    commandLoop(cache);
   }
 
   /**
@@ -79,13 +80,14 @@ public class Main {
    * Safely asks for bot token and uses this token in JDA builder.
    * Then attempts to build the JDA.
    *
+   * @param cache redis cache to be used by message handler.
    * @return 0 if JDA starts normally,
-   *     1 if token is not valid,
-   *     2 if thread gets interrupted while JDA is connecting.
+   * 1 if token is not valid,
+   * 2 if thread gets interrupted while JDA is connecting.
    */
-  public static int initJda() {
+  public static int initJda(final Cache cache) {
     char[] token = System.console().readPassword("Enter bot token: ");
-    MessageHandler messageHandler = new MessageHandler();
+    MessageHandler messageHandler = new MessageHandler(cache);
     JDABuilder jda = JDABuilder
         .createLight(String.valueOf(token))
         .addEventListeners(messageHandler);
@@ -110,8 +112,10 @@ public class Main {
   /**
    * Starts the command loop.
    * Loops until exit command is issued. Processes various commands for bot management.
+   *
+   * @param cache checked for availability.
    */
-  public static void commandLoop() {
+  public static void commandLoop(final Cache cache) {
     Stopwatch stopwatch = Stopwatch.createStarted();
     try (Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8)) {
       while (true) {
@@ -135,11 +139,11 @@ public class Main {
         } else if (command.equalsIgnoreCase("toggle-bot")) {
           properties.setBotEnabled(!properties.isBotEnabled());
           System.out.println("Is bot enabled: " + properties.isBotEnabled());
-        } else if (command.equalsIgnoreCase("toggle-database")) {
-          if (properties.getDb() != null) {
-            properties.setDatabaseEnabled(!properties.isDatabaseEnabled());
+        } else if (command.equalsIgnoreCase("toggle-cache")) {
+          if (cache.isAvailable()) {
+            properties.setCacheEnabled(!properties.isCacheEnabled());
           }
-          System.out.println("Is database enabled: " + properties.isDatabaseEnabled());
+          System.out.println("Is cache enabled: " + properties.isCacheEnabled());
         } else if (command.equalsIgnoreCase("status")) {
           System.out.println(properties.toString());
         } else if (command.toLowerCase().startsWith("set-status")) {

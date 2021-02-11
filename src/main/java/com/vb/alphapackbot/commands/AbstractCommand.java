@@ -19,6 +19,7 @@ package com.vb.alphapackbot.commands;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
+import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import net.dv8tion.jda.api.entities.Message;
@@ -44,11 +46,13 @@ public abstract class AbstractCommand implements Runnable {
   final List<Message> messages;
   final GuildMessageReceivedEvent event;
   final Commands command;
+  final Cache cache;
   volatile boolean isProcessing = true;
 
   AbstractCommand(final List<Message> messages,
                   final GuildMessageReceivedEvent event,
-                  final Commands command) {
+                  final Commands command,
+                  final Cache cache) {
 
     this.messages = messages.stream()
         .filter(x -> !x.getAttachments().isEmpty())
@@ -57,6 +61,7 @@ public abstract class AbstractCommand implements Runnable {
         .collect(Collectors.toList());
     this.event = event;
     this.command = command;
+    this.cache = cache;
     sendTyping(event.getChannel());
   }
 
@@ -87,16 +92,21 @@ public abstract class AbstractCommand implements Runnable {
   }
 
   /**
-   * Loads image from an URL into a BufferedImage.
+   * Attempts to load rarity from cache, if unsuccessful, computes the rarity from URL.
    *
-   * @param imageUrl URL from which to load image
-   * @return {@link BufferedImage}
+   * @param message message containing the URL of image.
+   * @return rarity extracted from image or loaded from cache.
    * @throws IOException if an I/O exception occurs.
    */
-  public BufferedImage getImage(@NotNull String imageUrl) throws IOException {
-    try (InputStream in = new URL(imageUrl).openStream()) {
-      return ImageIO.read(in);
+  public RarityTypes loadOrComputeRarity(Message message) throws IOException {
+    String messageUrl = message.getAttachments().get(0).getUrl();
+    Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
+    RarityTypes rarity = cachedValue.orElse(computeRarity(loadImageFromUrl(messageUrl)));
+    cache.save(messageUrl, rarity.toString());
+    if (rarity == RarityTypes.UNKNOWN) {
+      log.atInfo().log("Unknown rarity in %s!", messageUrl);
     }
+    return rarity;
   }
 
   /**
@@ -106,7 +116,7 @@ public abstract class AbstractCommand implements Runnable {
    * @return Rarity from {@link RarityTypes}
    */
   @NotNull
-  public RarityTypes getRarity(@NotNull BufferedImage image) {
+  public RarityTypes computeRarity(@NotNull BufferedImage image) {
     int width = (int) (image.getWidth() * 0.489583); //~940 @ FHD
     int height = (int) (image.getHeight() * 0.83333); //~900 @ FHD
     Color color = new Color(image.getRGB(width, height));
@@ -125,5 +135,18 @@ public abstract class AbstractCommand implements Runnable {
     }
     log.atInfo().log("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
     return RarityTypes.UNKNOWN;
+  }
+
+  /**
+   * Loads image from an URL into a BufferedImage.
+   *
+   * @param imageUrl URL from which to load image
+   * @return {@link BufferedImage}
+   * @throws IOException if an I/O exception occurs.
+   */
+  public BufferedImage loadImageFromUrl(@NotNull String imageUrl) throws IOException {
+    try (InputStream in = new URL(imageUrl).openStream()) {
+      return ImageIO.read(in);
+    }
   }
 }

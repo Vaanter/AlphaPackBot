@@ -35,6 +35,8 @@ public enum RarityTypes {
   LEGENDARY("Legendary"),
   UNKNOWN("Unknown");
 
+  private static final Map<String, RarityTypes> stringValues = Stream.of(values())
+      .collect(Collectors.toMap(RarityTypes::toString, x -> x));
   private final String rarity;
   @Getter
   private final ImmutableList<Range<Integer>> range;
@@ -80,9 +82,6 @@ public enum RarityTypes {
         break;
     }
   }
-
-  private static final Map<String, RarityTypes> stringValues = Stream.of(values())
-      .collect(Collectors.toMap(RarityTypes::toString, x -> x));
 
   public static Optional<RarityTypes> parse(String toParse) {
     return Optional.ofNullable(stringValues.getOrDefault(toParse, null));

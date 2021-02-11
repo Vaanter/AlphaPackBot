@@ -18,9 +18,9 @@ package com.vb.alphapackbot.commands;
 
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
+import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.RarityTypes;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -36,8 +36,9 @@ public class OccurrenceCommand extends AbstractCommand {
   public OccurrenceCommand(final List<Message> messages,
                            final GuildMessageReceivedEvent event,
                            final Commands command,
-                           final RarityTypes requestedRarity) {
-    super(messages, event, command);
+                           final RarityTypes requestedRarity,
+                           final Cache cache) {
+    super(messages, event, command, cache);
     this.requestedRarity = requestedRarity;
   }
 
@@ -62,12 +63,7 @@ public class OccurrenceCommand extends AbstractCommand {
   private Optional<Message> getOccurrence(List<Message> messages) {
     for (Message message : messages) {
       try {
-        String messageUrl = message.getAttachments().get(0).getUrl();
-        BufferedImage image = getImage(messageUrl);
-        RarityTypes rarity = getRarity(image);
-        if (rarity == RarityTypes.UNKNOWN) {
-          log.atInfo().log("Unknown rarity in %s!", messageUrl);
-        }
+        RarityTypes rarity = loadOrComputeRarity(message);
         if (rarity == requestedRarity) {
           return Optional.of(message);
         }
