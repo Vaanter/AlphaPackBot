@@ -101,8 +101,11 @@ public abstract class AbstractCommand implements Runnable {
   public RarityTypes loadOrComputeRarity(Message message) throws IOException {
     String messageUrl = message.getAttachments().get(0).getUrl();
     Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
-    RarityTypes rarity = cachedValue.orElse(computeRarity(loadImageFromUrl(messageUrl)));
-    cache.save(messageUrl, rarity.toString());
+    RarityTypes rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
+    if (cachedValue.isEmpty()) {
+      rarity = computeRarity(loadImageFromUrl(messageUrl));
+      cache.save(messageUrl, rarity.toString());
+    }
     if (rarity == RarityTypes.UNKNOWN) {
       log.atInfo().log("Unknown rarity in %s!", messageUrl);
     }

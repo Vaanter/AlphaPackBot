@@ -61,6 +61,9 @@ public class Cache {
     return Optional.empty();
   }
 
+  /**
+   * Saves the key/value pair to database if it's available and caching is enabled.
+   */
   public void save(String key, String value) {
     if (available && properties.isCacheEnabled()) {
       try (Jedis jedis = jedisPool.getResource()) {

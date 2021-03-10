@@ -18,13 +18,13 @@ plugins {
   id "java"
   id 'application'
   id "com.github.johnrengelman.shadow" version "6.1.0"
-  id "com.github.ben-manes.versions" version "0.36.0"
+  id "com.github.ben-manes.versions" version "0.38.0"
   id("net.ltgt.errorprone") version "1.3.0"
 }
 
 mainClassName = "com.vb.alphapackbot.Main"
 
-version "3.0.0"
+version "3.0.1"
 group "com.vb.alphapackbot"
 
 repositories {
@@ -33,9 +33,9 @@ repositories {
 }
 
 dependencies {
-  annotationProcessor 'org.projectlombok:lombok:1.18.16'
-  compileOnly 'org.projectlombok:lombok:1.18.16'
-  implementation('net.dv8tion:JDA:4.2.0_227') {
+  annotationProcessor 'org.projectlombok:lombok:1.18.18'
+  compileOnly 'org.projectlombok:lombok:1.18.18'
+  implementation('net.dv8tion:JDA:4.2.0_238') {
     exclude module: 'opus-java'
   }
 
@@ -48,7 +48,7 @@ dependencies {
 
   implementation "com.google.guava:guava:30.1-jre"
   implementation "com.google.mug:mug:5.2"
-  implementation "org.apache.commons:commons-lang3:3.11"
+  implementation "org.apache.commons:commons-lang3:3.12.0"
   errorprone("com.google.errorprone:error_prone_core:2.3.4")
 }
 

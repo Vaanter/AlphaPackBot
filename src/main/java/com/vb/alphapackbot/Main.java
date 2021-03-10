@@ -34,6 +34,12 @@ import net.dv8tion.jda.api.entities.Activity;
  * Main Class.
  */
 public class Main {
+  // Required for flogger to use sfl4j backend
+  static {
+    System.setProperty("flogger.backend_factory",
+        "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
+  }
+
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private static final Properties properties = Properties.getInstance();
   private static final ImmutableSet<String> commands = ImmutableSet.of(
@@ -43,13 +49,8 @@ public class Main {
       "toggle-bot",
       "toggle-cache",
       "set-status <status>");
-  private static JDA mainJda;
 
-  // Required for flogger to use sfl4j backend
-  static {
-    System.setProperty("flogger.backend_factory",
-        "com.google.common.flogger.backend.slf4j.Slf4jBackendFactory#getInstance");
-  }
+  private static JDA mainJda;
 
   // Registers shutdown hook to cleanly shutdown the JDA
   static {
