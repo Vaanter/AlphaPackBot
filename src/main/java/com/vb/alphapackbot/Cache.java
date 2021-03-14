@@ -32,7 +32,13 @@ public class Cache {
   @Getter
   private final boolean available;
 
-  public Cache(String address) {
+  /**
+   * Attempts to create a Redis cache connection. Sets corresponding flags according to result.
+   *
+   * @param address address to redis server.
+   * @param port port of redis server.
+   */
+  public Cache(String address, int port) {
     JedisPoolConfig config = new JedisPoolConfig();
     config.setBlockWhenExhausted(true);
     config.setMinIdle(1);
@@ -40,7 +46,8 @@ public class Cache {
     config.setMaxTotal(5);
     JedisPool jedisPool = null;
     try {
-      jedisPool = new JedisPool(config, address);
+      jedisPool = new JedisPool(config, address, port);
+      jedisPool.getResource().close();
       log.atInfo().log("Redis connection established.");
     } catch (JedisConnectionException jce) {
       log.atWarning().withCause(jce).log("Unable to connect to redis, disabling cache!");
@@ -51,6 +58,12 @@ public class Cache {
     }
   }
 
+  /**
+   * Attempts to get value specified by key and parses the rarity from it.
+   *
+   * @param key key of value to get from redis
+   * @return {@link Optional} containing {@link RarityTypes} or empty.
+   */
   public Optional<RarityTypes> getAndParse(String key) {
     if (available && properties.isCacheEnabled()) {
       try (Jedis jedis = jedisPool.getResource()) {

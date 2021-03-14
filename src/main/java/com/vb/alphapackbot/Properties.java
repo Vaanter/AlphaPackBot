@@ -16,9 +16,11 @@
 
 package com.vb.alphapackbot;
 
+import java.util.HashSet;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.Getter;
 import lombok.Setter;
+import net.dv8tion.jda.api.entities.GuildChannel;
 
 /**
  * Static properties class.
@@ -28,11 +30,12 @@ import lombok.Setter;
 public class Properties {
   private static final Properties instance = new Properties();
   private final LongAdder processingCounter = new LongAdder();
+  private final HashSet<GuildChannel> liveChannels = new HashSet<>();
 
   /**
    * Enables/disables cache.
    */
-  private boolean cacheEnabled = true;
+  private volatile boolean cacheEnabled = true;
 
   /**
    * Enables/disables sending messages to Discord.

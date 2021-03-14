@@ -32,18 +32,16 @@ import org.jetbrains.annotations.NotNull;
 public class CountCommand extends AbstractCommand {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
 
-  public CountCommand(final List<Message> messages,
-                      final GuildMessageReceivedEvent event,
+  public CountCommand(final GuildMessageReceivedEvent event,
                       final Commands command,
                       final Cache cache) {
-    super(messages, event, command, cache);
+    super(event, command, cache);
   }
 
   @Override
   public void run() {
     String authorId = event.getAuthor().getId();
-    String channelId = event.getChannel().getId();
-    UserData userData = getRaritiesForUser(messages, authorId, channelId);
+    UserData userData = getRaritiesForUser(messages, authorId);
     printRarityPerUser(userData, event.getChannel());
     finish();
   }
@@ -54,14 +52,12 @@ public class CountCommand extends AbstractCommand {
    *
    * @param messages  Messages from which rarities will be extracted
    * @param authorId  ID of request message author
-   * @param channelId ID of channel from which request was sent
    * @return returns {@link UserData} containing count of all rarities from user.
    */
   public UserData getRaritiesForUser(@NotNull List<Message> messages,
-                                     @NotNull String authorId,
-                                     @NotNull String channelId) {
+                                     @NotNull String authorId) {
     System.out.println("Getting rarity per user...");
-    UserData userData = new UserData(authorId, channelId);
+    UserData userData = new UserData(authorId);
     for (Message message : messages) {
       try {
         RarityTypes rarity = loadOrComputeRarity(message);

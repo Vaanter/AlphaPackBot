@@ -17,7 +17,6 @@
 package com.vb.alphapackbot;
 
 import com.google.common.base.Splitter;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +41,7 @@ public class Main {
 
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private static final Properties properties = Properties.getInstance();
+  private static final Telemetry telemetry = Telemetry.getInstance();
   private static final ImmutableSet<String> commands = ImmutableSet.of(
       "exit",
       "status",
@@ -68,7 +68,7 @@ public class Main {
    * @param args Standard main argument.
    */
   public static void main(String[] args) {
-    Cache cache = new Cache("localhost");
+    Cache cache = new Cache("localhost", 6379);
     int result = initJda(cache);
     if (result > 0) {
       System.exit(result);
@@ -117,7 +117,6 @@ public class Main {
    * @param cache checked for availability.
    */
   public static void commandLoop(final Cache cache) {
-    Stopwatch stopwatch = Stopwatch.createStarted();
     try (Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8)) {
       while (true) {
         String command = scanner.nextLine();
@@ -136,7 +135,7 @@ public class Main {
           properties.setPrintingEnabled(!properties.isPrintingEnabled());
           System.out.println("Is printing enabled: " + properties.isPrintingEnabled());
         } else if (command.equalsIgnoreCase("uptime")) {
-          System.out.println("Uptime: " + stopwatch.elapsed());
+          System.out.println("Uptime: " + telemetry.getStopwatch().elapsed());
         } else if (command.equalsIgnoreCase("toggle-bot")) {
           properties.setBotEnabled(!properties.isBotEnabled());
           System.out.println("Is bot enabled: " + properties.isBotEnabled());
@@ -146,6 +145,7 @@ public class Main {
           }
           System.out.println("Is cache enabled: " + properties.isCacheEnabled());
         } else if (command.equalsIgnoreCase("status")) {
+          System.out.println(telemetry.toString());
           System.out.println(properties.toString());
         } else if (command.toLowerCase().startsWith("set-status")) {
           List<String> commandParts = Splitter.on(" ")

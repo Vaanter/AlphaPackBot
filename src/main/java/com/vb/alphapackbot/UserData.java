@@ -27,16 +27,13 @@ import org.jetbrains.annotations.Nullable;
 public class UserData {
   private final EnumMap<RarityTypes, Integer> rarityData;
   private final String authorId;
-  private final String channelId;
 
-  public UserData(@NotNull String authorId,
-                  @NotNull String channelId) {
-    this(null, authorId, channelId);
+  public UserData(@NotNull String authorId) {
+    this(null, authorId);
   }
 
   public UserData(@Nullable EnumMap<RarityTypes, Integer> rarityData,
-                  @NotNull String authorId,
-                  @NotNull String channelId) {
+                  @NotNull String authorId) {
     if (rarityData == null) {
       ImmutableMap.Builder<RarityTypes, Integer> builder = ImmutableMap.builderWithExpectedSize(6);
       for (RarityTypes rarityType : RarityTypes.values()) {
@@ -45,7 +42,6 @@ public class UserData {
       rarityData = new EnumMap<>(builder.build());
     }
     this.authorId = authorId;
-    this.channelId = channelId;
     this.rarityData = rarityData;
   }
 
@@ -64,9 +60,5 @@ public class UserData {
    */
   public void increment(RarityTypes rarity) {
     rarityData.replace(rarity, rarityData.get(rarity) + 1);
-  }
-
-  public String getChannelId() {
-    return channelId;
   }
 }

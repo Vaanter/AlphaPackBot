@@ -28,7 +28,8 @@ import org.jetbrains.annotations.Nullable;
 public enum Commands {
   COUNT("count"),
   LAST("last"),
-  FIRST("first");
+  FIRST("first"),
+  STATUS("status");
 
   private static final Map<String, Commands> stringValues = Stream.of(values())
       .collect(Collectors.toMap(Commands::toString, x -> x));

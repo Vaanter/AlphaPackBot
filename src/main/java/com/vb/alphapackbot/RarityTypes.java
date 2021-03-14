@@ -18,11 +18,13 @@ package com.vb.alphapackbot;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Contains available rarity types and special unknown type.
@@ -84,6 +86,9 @@ public enum RarityTypes {
   }
 
   public static Optional<RarityTypes> parse(String toParse) {
+    if (toParse != null) {
+      toParse = StringUtils.capitalize(toParse.toLowerCase(Locale.ROOT));
+    }
     return Optional.ofNullable(stringValues.getOrDefault(toParse, null));
   }
 

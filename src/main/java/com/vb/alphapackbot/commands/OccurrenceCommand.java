@@ -33,12 +33,11 @@ public class OccurrenceCommand extends AbstractCommand {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
   private final RarityTypes requestedRarity;
 
-  public OccurrenceCommand(final List<Message> messages,
-                           final GuildMessageReceivedEvent event,
+  public OccurrenceCommand(final GuildMessageReceivedEvent event,
                            final Commands command,
                            final RarityTypes requestedRarity,
                            final Cache cache) {
-    super(messages, event, command, cache);
+    super(event, command, cache);
     this.requestedRarity = requestedRarity;
   }
 

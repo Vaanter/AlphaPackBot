@@ -19,6 +19,7 @@ package com.vb.alphapackbot.commands;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
+import com.google.mu.util.concurrent.Retryer;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
@@ -28,13 +29,16 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -43,18 +47,18 @@ import org.jetbrains.annotations.NotNull;
 public abstract class AbstractCommand implements Runnable {
   static final Properties properties = Properties.getInstance();
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
+  private static final int MAX_RETRIEVE_SIZE = 100;
   final List<Message> messages;
   final GuildMessageReceivedEvent event;
   final Commands command;
   final Cache cache;
   volatile boolean isProcessing = true;
 
-  AbstractCommand(final List<Message> messages,
-                  final GuildMessageReceivedEvent event,
+  AbstractCommand(final GuildMessageReceivedEvent event,
                   final Commands command,
                   final Cache cache) {
-
-    this.messages = messages.stream()
+    this.messages = getMessages(event.getChannel())
+        .stream()
         .filter(x -> !x.getAttachments().isEmpty())
         .filter(x -> x.getAuthor().getId().equals(event.getAuthor().getId()))
         .filter(m -> !m.getContentRaw().contains("*ignored"))
@@ -62,7 +66,43 @@ public abstract class AbstractCommand implements Runnable {
     this.event = event;
     this.command = command;
     this.cache = cache;
-    sendTyping(event.getChannel());
+    if (!properties.getLiveChannels().contains(event.getChannel())) {
+      properties.getLiveChannels().add(event.getChannel());
+      sendTyping(event.getChannel());
+    }
+  }
+
+  /**
+   * Returns all messages from specific channel.
+   *
+   * @param channel channel to get messages from
+   * @return ArrayList of messages
+   */
+  private @NotNull ArrayList<Message> getMessages(@NotNull TextChannel channel) {
+    System.out.println("Getting messages...");
+    ArrayList<Message> messages = new ArrayList<>();
+    MessageHistory history = channel.getHistory();
+    int amount = Integer.MAX_VALUE;
+
+    while (amount > 0) {
+      int numToRetrieve = Math.min(amount, MAX_RETRIEVE_SIZE);
+
+      try {
+        List<Message> retrieved = new Retryer()
+            .upon(RateLimitedException.class, Retryer.Delay.ofMillis(5000).exponentialBackoff(1, 5))
+            .retryBlockingly(() -> history.retrievePast(numToRetrieve).complete(true));
+        messages.addAll(retrieved);
+        if (retrieved.isEmpty()) {
+          break;
+        }
+      } catch (RateLimitedException rateLimitedException) {
+        log.atWarning()
+            .withCause(rateLimitedException)
+            .log("Too many requests, waiting 5 seconds.");
+      }
+      amount -= numToRetrieve;
+    }
+    return messages;
   }
 
   /**
@@ -100,11 +140,20 @@ public abstract class AbstractCommand implements Runnable {
    */
   public RarityTypes loadOrComputeRarity(Message message) throws IOException {
     String messageUrl = message.getAttachments().get(0).getUrl();
-    Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
-    RarityTypes rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
-    if (cachedValue.isEmpty()) {
-      rarity = computeRarity(loadImageFromUrl(messageUrl));
-      cache.save(messageUrl, rarity.toString());
+    RarityTypes rarity = null;
+    if (!message.getContentRaw().isEmpty()) {
+      Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
+      if (forcedRarity.isPresent()) {
+        rarity = forcedRarity.get();
+      }
+    }
+    if (rarity == null) {
+      Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
+      rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
+      if (cachedValue.isEmpty()) {
+        rarity = computeRarity(loadImageFromUrl(messageUrl));
+        cache.save(messageUrl, rarity.toString());
+      }
     }
     if (rarity == RarityTypes.UNKNOWN) {
       log.atInfo().log("Unknown rarity in %s!", messageUrl);
