@@ -19,24 +19,24 @@ package com.vb.alphapackbot;
 import com.google.common.base.Stopwatch;
 import java.time.Duration;
 import java.util.concurrent.atomic.LongAdder;
+import javax.inject.Singleton;
 import lombok.Getter;
 
+@Singleton
 public class Telemetry {
-  private static final Telemetry instance = new Telemetry();
   @Getter
   private final Stopwatch stopwatch = Stopwatch.createStarted();
   @Getter
   private final LongAdder commandsReceived = new LongAdder();
 
-  private Telemetry() {
-  }
 
-  public static Telemetry getInstance() {
-    return instance;
-  }
-
-  private String formatUptime() {
-    StringBuilder builder = new StringBuilder();
+  /**
+   * Formats the uptime.
+   *
+   * @return {@link String} containing the formatted time.
+   */
+  public String formatUptime() {
+    StringBuilder builder = new StringBuilder(11);
     Duration elapsed = stopwatch.elapsed();
     if (elapsed.toDays() > 0) {
       builder.append(String.format("%02d Days", elapsed.toDays()));
@@ -45,14 +45,14 @@ public class Telemetry {
     builder.append(String.format("%02dH:", elapsed.toHours()));
     elapsed = elapsed.minusHours(elapsed.toHours());
     builder.append(String.format("%02dM:", elapsed.toMinutes()));
-    elapsed = elapsed.minusHours(elapsed.toMinutes());
+    elapsed = elapsed.minusMinutes(elapsed.toMinutes());
     builder.append(String.format("%02dS", elapsed.toSeconds()));
     return builder.toString();
   }
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder(100);
+    StringBuilder builder = new StringBuilder(40);
     builder.append("Uptime: ").append(formatUptime()).append("\n");
     builder.append("Commands received: ").append(commandsReceived);
     return builder.toString();
