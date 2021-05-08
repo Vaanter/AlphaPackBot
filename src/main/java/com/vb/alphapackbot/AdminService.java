@@ -19,15 +19,15 @@ package com.vb.alphapackbot;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import io.quarkus.grpc.GrpcService;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.ShutdownEvent;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import io.vertx.mutiny.core.eventbus.Message;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
-@Singleton
+@GrpcService
 public class AdminService extends AdminGrpc.AdminImplBase {
   private static final Properties properties = Properties.getInstance();
   final Telemetry telemetry;
