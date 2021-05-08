@@ -19,8 +19,8 @@ package com.vb.alphapackbot.commands;
 import com.google.common.collect.Lists;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
-import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
+import com.vb.alphapackbot.TypingManager;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -38,8 +38,8 @@ public class OccurrenceCommand extends AbstractCommand {
                            final Commands command,
                            final RarityTypes requestedRarity,
                            final Cache cache,
-                           final Properties properties) {
-    super(event, command, cache, properties);
+                           final TypingManager typingManger) {
+    super(event, command, cache, typingManger);
     this.requestedRarity = requestedRarity;
   }
 

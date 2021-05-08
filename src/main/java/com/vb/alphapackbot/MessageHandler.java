@@ -46,16 +46,19 @@ public class MessageHandler extends ListenerAdapter {
       + "status - Prints bot status";
   private static final String invalidRarity = "\n Invalid rarity, acceptable rarities: "
       + "Common, Uncommon, Rare, Epic, Legendary, Unknown";
-  final Properties properties;
+  private static final Properties properties = Properties.getInstance();
   final Telemetry telemetry;
   final Cache cache;
+  final TypingManager typingManager;
   private final ExecutorService executor = Executors.newFixedThreadPool(5);
 
   @Inject
-  MessageHandler(final Properties properties, final Telemetry telemetry, final Cache cache) {
-    this.properties = properties;
+  MessageHandler(final Telemetry telemetry,
+                 final Cache cache,
+                 final TypingManager typingManager) {
     this.telemetry = telemetry;
     this.cache = cache;
+    this.typingManager = typingManager;
   }
 
   @Override
@@ -97,10 +100,8 @@ public class MessageHandler extends ListenerAdapter {
           mentions.add(event.getAuthor());
         }
         for (int i = 0; i < mentions.size(); i++) {
-          CountCommand countCommand = new CountCommand(event, command.get(), cache, properties);
-          synchronized (properties.getProcessingCounter()) {
-            properties.getProcessingCounter().increment();
-          }
+          CountCommand countCommand = new CountCommand(event, command.get(), cache, typingManager);
+          properties.getProcessingCounter().increment();
           executor.execute(countCommand);
         }
       } else if (command.get() == Commands.STATUS) {
@@ -117,7 +118,7 @@ public class MessageHandler extends ListenerAdapter {
           return;
         }
         OccurrenceCommand occurrenceCommand =
-            new OccurrenceCommand(event, command.get(), rarity.get(), cache, properties);
+            new OccurrenceCommand(event, command.get(), rarity.get(), cache, typingManager);
         synchronized (properties.getProcessingCounter()) {
           properties.getProcessingCounter().increment();
         }

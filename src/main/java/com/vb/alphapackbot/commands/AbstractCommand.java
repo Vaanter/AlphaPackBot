@@ -23,6 +23,7 @@ import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
+import com.vb.alphapackbot.TypingManager;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -47,17 +48,17 @@ import org.jetbrains.annotations.NotNull;
 public abstract class AbstractCommand implements Runnable {
   private static final Logger log = Logger.getLogger(AbstractCommand.class);
   private static final int MAX_RETRIEVE_SIZE = 100;
+  protected static final Properties properties = Properties.getInstance();
   final List<Message> messages;
   final GuildMessageReceivedEvent event;
   final Commands command;
   final Cache cache;
-  final Properties properties;
-  volatile boolean isProcessing = true;
+  final TypingManager typingManager;
 
   AbstractCommand(final GuildMessageReceivedEvent event,
                   final Commands command,
                   final Cache cache,
-                  final Properties properties) {
+                  final TypingManager typingManager) {
     this.messages = getMessages(event.getChannel())
         .stream()
         .filter(x -> !x.getAttachments().isEmpty())
@@ -67,11 +68,8 @@ public abstract class AbstractCommand implements Runnable {
     this.event = event;
     this.command = command;
     this.cache = cache;
-    this.properties = properties;
-    if (!properties.getLiveChannels().contains(event.getChannel())) {
-      properties.getLiveChannels().add(event.getChannel());
-      sendTyping(event.getChannel());
-    }
+    this.typingManager = typingManager;
+    typingManager.startIfNotRunning(event.getChannel());
   }
 
   /**
@@ -104,28 +102,8 @@ public abstract class AbstractCommand implements Runnable {
     return messages;
   }
 
-  /**
-   * Sends typing action while command is being processed.
-   *
-   * @param textChannel channel to which action is sent
-   */
-  private void sendTyping(TextChannel textChannel) {
-    final Thread typingThread = new Thread(() -> {
-      do {
-        textChannel.sendTyping().complete();
-        try {
-          Thread.sleep(5000);
-        } catch (InterruptedException e) {
-          log.warn("Typing thread interrupted!", e);
-        }
-      } while (isProcessing);
-    }, "Typing thread");
-    typingThread.setDaemon(true);
-    typingThread.start();
-  }
-
-  public synchronized void finish() {
-    isProcessing = false;
+  public void finish() {
+    typingManager.cancelThread(event.getChannel());
     properties.getProcessingCounter().decrement();
   }
 

@@ -18,8 +18,8 @@ package com.vb.alphapackbot.commands;
 
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
-import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
+import com.vb.alphapackbot.TypingManager;
 import com.vb.alphapackbot.UserData;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -36,8 +36,8 @@ public class CountCommand extends AbstractCommand {
   public CountCommand(final GuildMessageReceivedEvent event,
                       final Commands command,
                       final Cache cache,
-                      final Properties properties) {
-    super(event, command, cache, properties);
+                      final TypingManager typingManager) {
+    super(event, command, cache, typingManager);
   }
 
   @Override

@@ -21,7 +21,6 @@ import io.quarkus.runtime.annotations.QuarkusMain;
 
 @QuarkusMain
 public class Main {
-
   static {
     System.setProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager");
   }

@@ -39,7 +39,7 @@ public class Telemetry {
     StringBuilder builder = new StringBuilder(11);
     Duration elapsed = stopwatch.elapsed();
     if (elapsed.toDays() > 0) {
-      builder.append(String.format("%02d Days", elapsed.toDays()));
+      builder.append(String.format("%02d Days ", elapsed.toDays()));
       elapsed = elapsed.minusDays(elapsed.toDays());
     }
     builder.append(String.format("%02dH:", elapsed.toHours()));

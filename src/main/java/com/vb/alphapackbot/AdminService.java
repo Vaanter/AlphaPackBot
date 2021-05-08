@@ -29,19 +29,17 @@ import javax.inject.Singleton;
 
 @Singleton
 public class AdminService extends AdminGrpc.AdminImplBase {
-  final Properties properties;
+  private static final Properties properties = Properties.getInstance();
   final Telemetry telemetry;
   final Event<ShutdownEvent> event;
   final Cache cache;
   final EventBus bus;
 
   @Inject
-  AdminService(final Properties properties,
-               final Telemetry telemetry,
+  AdminService(final Telemetry telemetry,
                final Event<ShutdownEvent> event,
                final Cache cache,
                final EventBus bus) {
-    this.properties = properties;
     this.telemetry = telemetry;
     this.event = event;
     this.cache = cache;
