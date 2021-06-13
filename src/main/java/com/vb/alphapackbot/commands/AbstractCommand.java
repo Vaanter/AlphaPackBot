@@ -18,12 +18,12 @@ package com.vb.alphapackbot.commands;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
-import com.google.common.flogger.FluentLogger;
 import com.google.mu.util.concurrent.Retryer;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
+import com.vb.alphapackbot.TypingManager;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -39,24 +39,26 @@ import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
+import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Base class for all Commands.
  */
 public abstract class AbstractCommand implements Runnable {
-  static final Properties properties = Properties.getInstance();
-  private static final FluentLogger log = FluentLogger.forEnclosingClass();
+  private static final Logger log = Logger.getLogger(AbstractCommand.class);
   private static final int MAX_RETRIEVE_SIZE = 100;
+  protected static final Properties properties = Properties.getInstance();
   final List<Message> messages;
   final GuildMessageReceivedEvent event;
   final Commands command;
   final Cache cache;
-  volatile boolean isProcessing = true;
+  final TypingManager typingManager;
 
   AbstractCommand(final GuildMessageReceivedEvent event,
                   final Commands command,
-                  final Cache cache) {
+                  final Cache cache,
+                  final TypingManager typingManager) {
     this.messages = getMessages(event.getChannel())
         .stream()
         .filter(x -> !x.getAttachments().isEmpty())
@@ -66,10 +68,8 @@ public abstract class AbstractCommand implements Runnable {
     this.event = event;
     this.command = command;
     this.cache = cache;
-    if (!properties.getLiveChannels().contains(event.getChannel())) {
-      properties.getLiveChannels().add(event.getChannel());
-      sendTyping(event.getChannel());
-    }
+    this.typingManager = typingManager;
+    typingManager.startIfNotRunning(event.getChannel());
   }
 
   /**
@@ -79,7 +79,6 @@ public abstract class AbstractCommand implements Runnable {
    * @return ArrayList of messages
    */
   private @NotNull ArrayList<Message> getMessages(@NotNull TextChannel channel) {
-    System.out.println("Getting messages...");
     ArrayList<Message> messages = new ArrayList<>();
     MessageHistory history = channel.getHistory();
     int amount = Integer.MAX_VALUE;
@@ -96,38 +95,15 @@ public abstract class AbstractCommand implements Runnable {
           break;
         }
       } catch (RateLimitedException rateLimitedException) {
-        log.atWarning()
-            .withCause(rateLimitedException)
-            .log("Too many requests, waiting 5 seconds.");
+        log.warn("Too many requests, waiting 5 seconds.");
       }
       amount -= numToRetrieve;
     }
     return messages;
   }
 
-  /**
-   * Sends typing action while command is being processed.
-   *
-   * @param textChannel channel to which action is sent
-   */
-  private void sendTyping(TextChannel textChannel) {
-    final Thread typingThread = new Thread(() -> {
-      do {
-        textChannel.sendTyping().complete();
-        System.out.println("Typing!");
-        try {
-          Thread.sleep(5000);
-        } catch (InterruptedException e) {
-          log.atWarning().withCause(e).log("Typing thread interrupted!");
-        }
-      } while (isProcessing);
-    }, "Typing thread");
-    typingThread.setDaemon(true);
-    typingThread.start();
-  }
-
-  public synchronized void finish() {
-    isProcessing = false;
+  public void finish() {
+    typingManager.cancelThread(event.getChannel());
     properties.getProcessingCounter().decrement();
   }
 
@@ -141,7 +117,7 @@ public abstract class AbstractCommand implements Runnable {
   public RarityTypes loadOrComputeRarity(Message message) throws IOException {
     String messageUrl = message.getAttachments().get(0).getUrl();
     RarityTypes rarity = null;
-    if (!message.getContentRaw().isEmpty()) {
+    if (!message.getContentRaw().isEmpty() && message.getContentRaw().startsWith("*")) {
       Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
       if (forcedRarity.isPresent()) {
         rarity = forcedRarity.get();
@@ -156,7 +132,7 @@ public abstract class AbstractCommand implements Runnable {
       }
     }
     if (rarity == RarityTypes.UNKNOWN) {
-      log.atInfo().log("Unknown rarity in %s!", messageUrl);
+      log.infof("Unknown rarity in %s!", messageUrl);
     }
     return rarity;
   }
@@ -185,7 +161,7 @@ public abstract class AbstractCommand implements Runnable {
         return rarity;
       }
     }
-    log.atInfo().log("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
+    log.infof("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
     return RarityTypes.UNKNOWN;
   }
 

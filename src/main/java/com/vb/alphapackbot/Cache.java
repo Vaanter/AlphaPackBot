@@ -16,45 +16,48 @@
 
 package com.vb.alphapackbot;
 
-import com.google.common.flogger.FluentLogger;
 import java.util.Optional;
+import javax.inject.Singleton;
 import lombok.Getter;
+import org.jboss.logging.Logger;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
-
+@Singleton
 public class Cache {
-  private static final FluentLogger log = FluentLogger.forEnclosingClass();
+  private static final Logger log = Logger.getLogger(Cache.class);
   private static final Properties properties = Properties.getInstance();
   private final JedisPool jedisPool;
   @Getter
-  private final boolean available;
+  private boolean available;
 
   /**
    * Attempts to create a Redis cache connection. Sets corresponding flags according to result.
-   *
-   * @param address address to redis server.
-   * @param port port of redis server.
    */
-  public Cache(String address, int port) {
+  public Cache() {
     JedisPoolConfig config = new JedisPoolConfig();
     config.setBlockWhenExhausted(true);
     config.setMinIdle(1);
     config.setMaxIdle(5);
     config.setMaxTotal(5);
     JedisPool jedisPool = null;
+    Jedis jedis = null;
     try {
-      jedisPool = new JedisPool(config, address, port);
-      jedisPool.getResource().close();
-      log.atInfo().log("Redis connection established.");
+      jedisPool = new JedisPool(config);
+      jedis = jedisPool.getResource();
+      log.info("Redis connection established.");
+      this.available = true;
     } catch (JedisConnectionException jce) {
-      log.atWarning().withCause(jce).log("Unable to connect to redis, disabling cache!");
-      Properties.getInstance().setCacheEnabled(false);
+      log.warn("Unable to connect to redis, disabling cache!");
+      properties.setCacheEnabled(false);
+      this.available = false;
     } finally {
+      if (jedis != null) {
+        jedis.close();
+      }
       this.jedisPool = jedisPool;
-      this.available = this.jedisPool != null;
     }
   }
 
@@ -64,10 +67,10 @@ public class Cache {
    * @param key key of value to get from redis
    * @return {@link Optional} containing {@link RarityTypes} or empty.
    */
-  public Optional<RarityTypes> getAndParse(String key) {
+  public Optional<RarityTypes> getAndParse(final String key) {
     if (available && properties.isCacheEnabled()) {
       try (Jedis jedis = jedisPool.getResource()) {
-        String value = jedis.get(key);
+        final String value = jedis.get(key);
         return RarityTypes.parse(value);
       }
     }
@@ -77,7 +80,7 @@ public class Cache {
   /**
    * Saves the key/value pair to database if it's available and caching is enabled.
    */
-  public void save(String key, String value) {
+  public void save(final String key, final String value) {
     if (available && properties.isCacheEnabled()) {
       try (Jedis jedis = jedisPool.getResource()) {
         jedis.set(key, value);

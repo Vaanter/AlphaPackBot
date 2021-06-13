@@ -14,4 +14,14 @@
  *    limitations under the License.
  */
 
-rootProject.name = "AlphaPackBot"
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id "${quarkusPluginId}" version "${quarkusPluginVersion}"
+    }
+}
+rootProject.name='AlphaPackBot'

@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.vb.alphapackbot";
+option java_outer_classname = "AlphaPackBotProto";
+
+package alphapackbot;
+
+service Admin {
+    rpc GetStatus (StatusRequest) returns (StatusReply) {}
+    rpc ToggleProperty (ToggleRequest) returns (ToggleResponse) {}
+    rpc SetBotStatus (BotStatusRequest) returns (BotStatusReply) {}
+    rpc Exit (ExitRequest) returns (ExitResponse) {}
+}
+
+message StatusRequest {
+}
+
+message StatusReply {
+    string uptime = 1;
+    uint64 commandsReceived = 2;
+    bool isBotEnabled = 3;
+    uint32 processingCounter = 4;
+    bool isCacheAvailable = 5;
+    bool isCacheEnabled = 6;
+    bool isPrintingEnabled = 7;
+}
+
+message ToggleRequest {
+    enum Toggles {
+        BOT = 0;
+        PRINTING = 1;
+        CACHE = 2;
+    }
+    Toggles toggle = 1;
+    bool newValue = 2;
+}
+
+message ToggleResponse {
+}
+
+message BotStatusRequest {
+    enum ActivityType {
+        PLAYING = 0;
+        COMPETING = 1;
+        LISTENING = 2;
+        WATCHING = 3;
+        CLEAR = 4;
+    }
+    ActivityType type = 1;
+    string name = 2;
+}
+
+message BotStatusReply {
+    uint32 statusCode = 1;
+}
+
+message ExitRequest {}
+
+message ExitResponse {}
+

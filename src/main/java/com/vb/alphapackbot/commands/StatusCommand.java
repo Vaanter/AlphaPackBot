@@ -21,15 +21,22 @@ import com.vb.alphapackbot.Telemetry;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 public class StatusCommand {
-  private static final Properties properties = Properties.getInstance();
-  private static final Telemetry telemetry = Telemetry.getInstance();
-
   private final GuildMessageReceivedEvent event;
+  final Properties properties;
+  final Telemetry telemetry;
 
-  public StatusCommand(final GuildMessageReceivedEvent event) {
+  public StatusCommand(final GuildMessageReceivedEvent event,
+                       final Properties properties,
+                       final Telemetry telemetry) {
     this.event = event;
+    this.properties = properties;
+    this.telemetry = telemetry;
   }
 
+  /**
+   * Sends a message to discord containing current status of the Bot.
+   * If printing is disabled, this method does nothing and returns.
+   */
   public void sendStatus() {
     if (properties.isPrintingEnabled()) {
       event.getChannel().sendMessage(telemetry.toString()).complete();

@@ -16,11 +16,9 @@
 
 package com.vb.alphapackbot;
 
-import java.util.HashSet;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.Getter;
 import lombok.Setter;
-import net.dv8tion.jda.api.entities.GuildChannel;
 
 /**
  * Static properties class.
@@ -28,9 +26,8 @@ import net.dv8tion.jda.api.entities.GuildChannel;
 @Getter
 @Setter
 public class Properties {
-  private static final Properties instance = new Properties();
+  private static final Properties properties = new Properties();
   private final LongAdder processingCounter = new LongAdder();
-  private final HashSet<GuildChannel> liveChannels = new HashSet<>();
 
   /**
    * Enables/disables cache.
@@ -48,7 +45,7 @@ public class Properties {
   private volatile boolean isBotEnabled = true;
 
   public static Properties getInstance() {
-    return instance;
+    return properties;
   }
 
   @Override

@@ -26,7 +26,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -34,27 +35,34 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Handles received messages and starts processor.
+ * Handles received messages and executes requested commands.
  */
+@Singleton
 public class MessageHandler extends ListenerAdapter {
   private static final String invalidCommandMessage = "\nInvalid command, available commands: \n"
       + "count - Counts all rarities\n"
       + "last <rarity> - Prints last occurrence of rarity\n"
-      + "first <rarity> - Prints first occurrence of rarity";
+      + "first <rarity> - Prints first occurrence of rarity\n"
+      + "status - Prints bot status";
   private static final String invalidRarity = "\n Invalid rarity, acceptable rarities: "
       + "Common, Uncommon, Rare, Epic, Legendary, Unknown";
-
   private static final Properties properties = Properties.getInstance();
-  private static final Telemetry telemetry = Telemetry.getInstance();
-  private final ExecutorService executor = Executors.newFixedThreadPool(10);
-  private final Cache cache;
+  final Telemetry telemetry;
+  final Cache cache;
+  final TypingManager typingManager;
+  private final ExecutorService executor = Executors.newFixedThreadPool(5);
 
-  public MessageHandler(Cache cache) {
+  @Inject
+  MessageHandler(final Telemetry telemetry,
+                 final Cache cache,
+                 final TypingManager typingManager) {
+    this.telemetry = telemetry;
     this.cache = cache;
+    this.typingManager = typingManager;
   }
 
   @Override
-  public void onGuildMessageReceived(@Nonnull final GuildMessageReceivedEvent event) {
+  public void onGuildMessageReceived(final GuildMessageReceivedEvent event) {
     if (event.getAuthor().isBot()) {
       return;
     }
@@ -92,14 +100,12 @@ public class MessageHandler extends ListenerAdapter {
           mentions.add(event.getAuthor());
         }
         for (int i = 0; i < mentions.size(); i++) {
-          CountCommand countCommand = new CountCommand(event, command.get(), cache);
-          synchronized (properties.getProcessingCounter()) {
-            properties.getProcessingCounter().increment();
-          }
+          CountCommand countCommand = new CountCommand(event, command.get(), cache, typingManager);
+          properties.getProcessingCounter().increment();
           executor.execute(countCommand);
         }
       } else if (command.get() == Commands.STATUS) {
-        StatusCommand statusCommand = new StatusCommand(event);
+        StatusCommand statusCommand = new StatusCommand(event, properties, telemetry);
         statusCommand.sendStatus();
       } else {
         Optional<RarityTypes> rarity = parseRarity(event.getMessage().getContentStripped());
@@ -112,10 +118,8 @@ public class MessageHandler extends ListenerAdapter {
           return;
         }
         OccurrenceCommand occurrenceCommand =
-            new OccurrenceCommand(event, command.get(), rarity.get(), cache);
-        synchronized (properties.getProcessingCounter()) {
-          properties.getProcessingCounter().increment();
-        }
+            new OccurrenceCommand(event, command.get(), rarity.get(), cache, typingManager);
+        properties.getProcessingCounter().increment();
         executor.execute(occurrenceCommand);
       }
     }
@@ -125,7 +129,7 @@ public class MessageHandler extends ListenerAdapter {
    * Parses command from second position (indexed from 1) in message.
    * <p>Available commands are specified in {@link Commands}</p>
    *
-   * @param message String representation of message.
+   * @param message String representation of a message.
    * @return {@link Optional} of {@link Commands} or empty if invalid / none command is passed.
    */
   private Optional<Commands> parseCommand(@NotNull String message) {

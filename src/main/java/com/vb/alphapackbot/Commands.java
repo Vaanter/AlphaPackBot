@@ -16,6 +16,7 @@
 
 package com.vb.alphapackbot;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -41,6 +42,9 @@ public enum Commands {
   }
 
   public static Optional<Commands> parse(@Nullable String toParse) {
+    if (toParse != null) {
+      toParse = toParse.toLowerCase(Locale.ROOT);
+    }
     return Optional.ofNullable(stringValues.getOrDefault(toParse, null));
   }
 

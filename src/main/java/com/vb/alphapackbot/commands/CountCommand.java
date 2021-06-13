@@ -16,10 +16,10 @@
 
 package com.vb.alphapackbot.commands;
 
-import com.google.common.flogger.FluentLogger;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.RarityTypes;
+import com.vb.alphapackbot.TypingManager;
 import com.vb.alphapackbot.UserData;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -27,15 +27,17 @@ import java.util.List;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 
 public class CountCommand extends AbstractCommand {
-  private static final FluentLogger log = FluentLogger.forEnclosingClass();
+  private static final Logger log = Logger.getLogger(CountCommand.class);
 
   public CountCommand(final GuildMessageReceivedEvent event,
                       final Commands command,
-                      final Cache cache) {
-    super(event, command, cache);
+                      final Cache cache,
+                      final TypingManager typingManager) {
+    super(event, command, cache, typingManager);
   }
 
   @Override
@@ -50,8 +52,8 @@ public class CountCommand extends AbstractCommand {
    * Obtains all rarity data for specific user.
    * Check {@link CountCommand#computeRarity(BufferedImage)}
    *
-   * @param messages  Messages from which rarities will be extracted
-   * @param authorId  ID of request message author
+   * @param messages Messages from which rarities will be extracted
+   * @param authorId ID of request message author
    * @return returns {@link UserData} containing count of all rarities from user.
    */
   public UserData getRaritiesForUser(@NotNull List<Message> messages,
@@ -63,7 +65,7 @@ public class CountCommand extends AbstractCommand {
         RarityTypes rarity = loadOrComputeRarity(message);
         userData.increment(rarity);
       } catch (IOException e) {
-        log.atSevere().withCause(e).log("Exception getting image!");
+        log.error("Exception getting image!", e);
       }
     }
     return userData;
@@ -76,6 +78,9 @@ public class CountCommand extends AbstractCommand {
    * @param channel  Channel to print data to
    */
   public void printRarityPerUser(@NotNull UserData userData, @NotNull TextChannel channel) {
+    if (!properties.isPrintingEnabled()) {
+      return;
+    }
     int total = userData.getRarityData().get(RarityTypes.COMMON)
         + userData.getRarityData().get(RarityTypes.UNCOMMON)
         + userData.getRarityData().get(RarityTypes.RARE)
@@ -92,10 +97,6 @@ public class CountCommand extends AbstractCommand {
         + RarityTypes.LEGENDARY + ": " + userData.getRarityData().get(RarityTypes.LEGENDARY) + "\n"
         + RarityTypes.UNKNOWN + ": " + userData.getRarityData().get(RarityTypes.UNKNOWN);
 
-    System.out.println(message);
-
-    if (properties.isPrintingEnabled()) {
-      channel.sendMessage(message).complete();
-    }
+    channel.sendMessage(message).complete();
   }
 }
