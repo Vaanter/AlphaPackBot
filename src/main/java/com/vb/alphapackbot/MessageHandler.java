@@ -119,9 +119,7 @@ public class MessageHandler extends ListenerAdapter {
         }
         OccurrenceCommand occurrenceCommand =
             new OccurrenceCommand(event, command.get(), rarity.get(), cache, typingManager);
-        synchronized (properties.getProcessingCounter()) {
-          properties.getProcessingCounter().increment();
-        }
+        properties.getProcessingCounter().increment();
         executor.execute(occurrenceCommand);
       }
     }

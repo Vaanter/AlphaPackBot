@@ -78,6 +78,9 @@ public class CountCommand extends AbstractCommand {
    * @param channel  Channel to print data to
    */
   public void printRarityPerUser(@NotNull UserData userData, @NotNull TextChannel channel) {
+    if (!properties.isPrintingEnabled()) {
+      return;
+    }
     int total = userData.getRarityData().get(RarityTypes.COMMON)
         + userData.getRarityData().get(RarityTypes.UNCOMMON)
         + userData.getRarityData().get(RarityTypes.RARE)
@@ -94,10 +97,6 @@ public class CountCommand extends AbstractCommand {
         + RarityTypes.LEGENDARY + ": " + userData.getRarityData().get(RarityTypes.LEGENDARY) + "\n"
         + RarityTypes.UNKNOWN + ": " + userData.getRarityData().get(RarityTypes.UNKNOWN);
 
-    System.out.println(message);
-
-    if (properties.isPrintingEnabled()) {
-      channel.sendMessage(message).complete();
-    }
+    channel.sendMessage(message).complete();
   }
 }
