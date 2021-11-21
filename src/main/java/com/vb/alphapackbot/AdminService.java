@@ -67,17 +67,10 @@ public class AdminService extends AdminGrpc.AdminImplBase {
   public void toggleProperty(final ToggleRequest request,
                              final StreamObserver<ToggleResponse> responseObserver) {
     switch (request.getToggle()) {
-      case BOT:
-        properties.setBotEnabled(request.getNewValue());
-        break;
-      case PRINTING:
-        properties.setPrintingEnabled(request.getNewValue());
-        break;
-      case CACHE:
-        properties.setCacheEnabled(request.getNewValue());
-        break;
-      default:
-        break;
+      case BOT -> properties.setBotEnabled(request.getNewValue());
+      case PRINTING -> properties.setPrintingEnabled(request.getNewValue());
+      case CACHE -> properties.setCacheEnabled(request.getNewValue());
+      default -> {}
     }
     responseObserver.onNext(ToggleResponse.newBuilder().build());
     responseObserver.onCompleted();

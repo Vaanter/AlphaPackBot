@@ -33,7 +33,7 @@ import org.jboss.logging.Logger;
 public class JdaManager implements QuarkusApplication {
   private static final Logger log = Logger.getLogger(JdaManager.class);
 
-  JDA mainJda;
+  private JDA mainJda;
 
   final MessageHandler messageHandler;
 

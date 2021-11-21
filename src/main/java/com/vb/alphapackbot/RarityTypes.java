@@ -44,42 +44,30 @@ public enum RarityTypes {
   RarityTypes(String rarity) {
     this.rarity = rarity;
     switch (rarity) {
-      case "Common":
-        range = ImmutableList.of(
-            Range.closed(60, 100),
-            Range.closed(60, 100),
-            Range.closed(60, 100));
-        break;
-      case "Uncommon":
-        range = ImmutableList.of(
-            Range.closed(200, 250),
-            Range.closed(185, 235),
-            Range.closed(160, 210));
-        break;
-      case "Rare":
-        range = ImmutableList.of(
-            Range.closed(55, 105),
-            Range.closed(135, 200),
-            Range.closed(185, 255));
-        break;
-      case "Epic":
-        range = ImmutableList.of(
-            Range.closed(135, 185),
-            Range.closed(50, 90),
-            Range.closed(155, 210));
-        break;
-      case "Legendary":
-        range = ImmutableList.of(
-            Range.closed(235, 255),
-            Range.closed(145, 170),
-            Range.closed(5, 30));
-        break;
-      default:
-        range = ImmutableList.of(
-            Range.closed(0, 0),
-            Range.closed(0, 0),
-            Range.closed(0, 0));
-        break;
+      case "Common" -> range = ImmutableList.of(
+          Range.closed(60, 100),
+          Range.closed(60, 100),
+          Range.closed(60, 100));
+      case "Uncommon" -> range = ImmutableList.of(
+          Range.closed(200, 250),
+          Range.closed(185, 235),
+          Range.closed(160, 210));
+      case "Rare" -> range = ImmutableList.of(
+          Range.closed(55, 105),
+          Range.closed(135, 200),
+          Range.closed(185, 255));
+      case "Epic" -> range = ImmutableList.of(
+          Range.closed(135, 185),
+          Range.closed(50, 90),
+          Range.closed(155, 210));
+      case "Legendary" -> range = ImmutableList.of(
+          Range.closed(235, 255),
+          Range.closed(145, 170),
+          Range.closed(5, 30));
+      default -> range = ImmutableList.of(
+          Range.closed(0, 0),
+          Range.closed(0, 0),
+          Range.closed(0, 0));
     }
   }
 

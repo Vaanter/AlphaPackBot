@@ -40,11 +40,12 @@ import org.jetbrains.annotations.NotNull;
  */
 @Singleton
 public class MessageHandler extends ListenerAdapter {
-  private static final String invalidCommandMessage = "\nInvalid command, available commands: \n"
-      + "count - Counts all rarities\n"
-      + "last <rarity> - Prints last occurrence of rarity\n"
-      + "first <rarity> - Prints first occurrence of rarity\n"
-      + "status - Prints bot status";
+  private static final String invalidCommandMessage = """
+      Invalid command, available commands:\s
+      count - Counts all rarities
+      last <rarity> - Prints last occurrence of rarity
+      first <rarity> - Prints first occurrence of rarity
+      status - Prints bot status""";
   private final ExecutorService executor = Executors.newFixedThreadPool(5);
   final Telemetry telemetry;
   final Properties properties;
@@ -63,66 +64,66 @@ public class MessageHandler extends ListenerAdapter {
       return;
     }
     Optional<Commands> command = parseCommand(message.getContentStripped());
-      if (command.isEmpty()) {
-        if (properties.isPrintingEnabled()) {
-        message
-              .reply(invalidCommandMessage)
-              .complete();
-        }
-        if (properties.isPrintingEnabled()) {
-        message.addReaction("U+1F44E").complete(); // Thumbs down emoji
-        }
-        return;
-      }
-      telemetry.getCommandsReceived().increment();
+    if (command.isEmpty()) {
       if (properties.isPrintingEnabled()) {
-      message.addReaction("U+1F44D").complete(); // Thumbs up emoji
+        message
+            .reply(invalidCommandMessage)
+            .complete();
       }
-      if (command.get() == Commands.COUNT) {
-        HashSet<User> mentions = new HashSet<>();
+      if (properties.isPrintingEnabled()) {
+        message.addReaction("U+1F44E").complete(); // Thumbs down emoji
+      }
+      return;
+    }
+    telemetry.getCommandsReceived().increment();
+    if (properties.isPrintingEnabled()) {
+      message.addReaction("U+1F44D").complete(); // Thumbs up emoji
+    }
+    if (command.get() == Commands.COUNT) {
+      HashSet<User> mentions = new HashSet<>();
       if (!message.getMentionedRoles().isEmpty()) {
-          event.getGuild()
+        event.getGuild()
             .getMembersWithRoles(message.getMentionedRoles())
-              .stream()
-              .map(Member::getUser)
-              .forEach(mentions::add);
-        }
+            .stream()
+            .map(Member::getUser)
+            .forEach(mentions::add);
+      }
       if (!message.getMentionedUsers().isEmpty()) {
         mentions.addAll(message.getMentionedUsers());
-        }
-        if (mentions.isEmpty()) {
-          mentions.add(event.getAuthor());
-        }
+      }
+      if (mentions.isEmpty()) {
+        mentions.add(event.getAuthor());
+      }
       for (User user : mentions) {
         CountCommand countCommand = new CountCommand(
             user.getId(),
             event,
             command.get());
-          properties.getProcessingCounter().increment();
-          executor.execute(countCommand);
-        }
-      } else if (command.get() == Commands.STATUS) {
+        properties.getProcessingCounter().increment();
+        executor.execute(countCommand);
+      }
+    } else if (command.get() == Commands.STATUS) {
       var statusCommand = new StatusCommand(event, properties, telemetry);
-        statusCommand.sendStatus();
-      } else {
+      statusCommand.sendStatus();
+    } else {
       Optional<RarityTypes> rarity = parseRarity(message.getContentStripped());
-        if (rarity.isEmpty()) {
-          if (properties.isPrintingEnabled()) {
+      if (rarity.isEmpty()) {
+        if (properties.isPrintingEnabled()) {
           String invalidRarity =
               """
               Invalid rarity, acceptable rarities: Common, Uncommon, Rare, Epic, Legendary, Unknown
               """;
           message
-                .reply(invalidRarity)
-                .complete();
-          }
-          return;
+              .reply(invalidRarity)
+              .complete();
         }
-      var occurrenceCommand = new OccurrenceCommand(event, command.get(), rarity.get());
-        properties.getProcessingCounter().increment();
-        executor.execute(occurrenceCommand);
+        return;
       }
+      var occurrenceCommand = new OccurrenceCommand(event, command.get(), rarity.get());
+      properties.getProcessingCounter().increment();
+      executor.execute(occurrenceCommand);
     }
+  }
 
   /**
    * Parses command from second position (indexed from 1) in message.

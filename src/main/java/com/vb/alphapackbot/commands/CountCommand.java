@@ -67,9 +67,7 @@ public class CountCommand extends AbstractCommand {
    * @param authorId ID of request message author
    * @return returns {@link UserData} containing count of all rarities from user.
    */
-  public UserData getRaritiesForUser(@NotNull List<Message> messages,
-                                     @NotNull String authorId) {
-    System.out.println("Getting rarity per user...");
+  public UserData getRaritiesForUser(@NotNull List<Message> messages, @NotNull String authorId) {
     UserData userData = new UserData(authorId);
     for (Message message : messages) {
       try {
@@ -83,10 +81,10 @@ public class CountCommand extends AbstractCommand {
   }
 
   /**
-   * Prints user data to console and sends message to channel if enabled.
+   * Sends message to channel if enabled.
    *
    * @param userData Data to be printed
-   * @param channel  Channel to print data to
+   * @param channel Channel to print data to
    */
   public void printRarityPerUser(@NotNull UserData userData, @NotNull TextChannel channel) {
     if (!properties.isPrintingEnabled()) {
