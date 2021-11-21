@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -44,86 +45,84 @@ public class MessageHandler extends ListenerAdapter {
       + "last <rarity> - Prints last occurrence of rarity\n"
       + "first <rarity> - Prints first occurrence of rarity\n"
       + "status - Prints bot status";
-  private static final String invalidRarity = "\n Invalid rarity, acceptable rarities: "
-      + "Common, Uncommon, Rare, Epic, Legendary, Unknown";
-  private static final Properties properties = Properties.getInstance();
-  final Telemetry telemetry;
-  final Cache cache;
-  final TypingManager typingManager;
   private final ExecutorService executor = Executors.newFixedThreadPool(5);
+  final Telemetry telemetry;
+  final Properties properties;
 
   @Inject
-  MessageHandler(final Telemetry telemetry,
-                 final Cache cache,
-                 final TypingManager typingManager) {
+  MessageHandler(final Properties properties, final Telemetry telemetry) {
+    this.properties = properties;
     this.telemetry = telemetry;
-    this.cache = cache;
-    this.typingManager = typingManager;
   }
 
   @Override
   public void onGuildMessageReceived(final GuildMessageReceivedEvent event) {
-    if (event.getAuthor().isBot()) {
+    Message message = event.getMessage();
+    if (event.getAuthor().isBot() || !properties.isBotEnabled()
+        || !message.getContentStripped().toLowerCase(Locale.getDefault()).startsWith("*pack")) {
       return;
     }
-    if (event.getMessage().getContentStripped().toLowerCase(Locale.getDefault()).startsWith("*pack")
-        && properties.isBotEnabled()) {
-      Optional<Commands> command = parseCommand(event.getMessage().getContentStripped());
+    Optional<Commands> command = parseCommand(message.getContentStripped());
       if (command.isEmpty()) {
         if (properties.isPrintingEnabled()) {
-          event.getMessage()
+        message
               .reply(invalidCommandMessage)
               .complete();
         }
         if (properties.isPrintingEnabled()) {
-          event.getMessage().addReaction("U+1F44E").complete();
+        message.addReaction("U+1F44E").complete(); // Thumbs down emoji
         }
         return;
       }
       telemetry.getCommandsReceived().increment();
       if (properties.isPrintingEnabled()) {
-        event.getMessage().addReaction("U+1F44D").complete();
+      message.addReaction("U+1F44D").complete(); // Thumbs up emoji
       }
       if (command.get() == Commands.COUNT) {
         HashSet<User> mentions = new HashSet<>();
-        if (!event.getMessage().getMentionedRoles().isEmpty()) {
+      if (!message.getMentionedRoles().isEmpty()) {
           event.getGuild()
-              .getMembersWithRoles(event.getMessage().getMentionedRoles())
+            .getMembersWithRoles(message.getMentionedRoles())
               .stream()
               .map(Member::getUser)
               .forEach(mentions::add);
         }
-        if (!event.getMessage().getMentionedUsers().isEmpty()) {
-          mentions.addAll(event.getMessage().getMentionedUsers());
+      if (!message.getMentionedUsers().isEmpty()) {
+        mentions.addAll(message.getMentionedUsers());
         }
         if (mentions.isEmpty()) {
           mentions.add(event.getAuthor());
         }
-        for (int i = 0; i < mentions.size(); i++) {
-          CountCommand countCommand = new CountCommand(event, command.get(), cache, typingManager);
+      for (User user : mentions) {
+        CountCommand countCommand = new CountCommand(
+            user.getId(),
+            event,
+            command.get());
           properties.getProcessingCounter().increment();
           executor.execute(countCommand);
         }
       } else if (command.get() == Commands.STATUS) {
-        StatusCommand statusCommand = new StatusCommand(event, properties, telemetry);
+      var statusCommand = new StatusCommand(event, properties, telemetry);
         statusCommand.sendStatus();
       } else {
-        Optional<RarityTypes> rarity = parseRarity(event.getMessage().getContentStripped());
+      Optional<RarityTypes> rarity = parseRarity(message.getContentStripped());
         if (rarity.isEmpty()) {
           if (properties.isPrintingEnabled()) {
-            event.getMessage()
+          String invalidRarity =
+              """
+              Invalid rarity, acceptable rarities: Common, Uncommon, Rare, Epic, Legendary, Unknown
+              """;
+          message
                 .reply(invalidRarity)
                 .complete();
           }
           return;
         }
-        OccurrenceCommand occurrenceCommand =
-            new OccurrenceCommand(event, command.get(), rarity.get(), cache, typingManager);
+      var occurrenceCommand = new OccurrenceCommand(event, command.get(), rarity.get());
         properties.getProcessingCounter().increment();
         executor.execute(occurrenceCommand);
       }
     }
-  }
 
   /**
    * Parses command from second position (indexed from 1) in message.

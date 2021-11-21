@@ -17,12 +17,14 @@
 package com.vb.alphapackbot;
 
 import java.util.concurrent.atomic.LongAdder;
+import javax.inject.Singleton;
 
 /**
- * Static properties class.
+ * Singleton properties bean.
  */
+@Singleton
 public class Properties {
-  private static final Properties properties = new Properties();
+  @SuppressWarnings("SameNameButDifferent")
   private final LongAdder processingCounter = new LongAdder();
 
   /**
@@ -39,10 +41,6 @@ public class Properties {
    * Enables/disables all non-management bot processes.
    */
   private volatile boolean isBotEnabled = true;
-
-  public static Properties getInstance() {
-    return properties;
-  }
 
   @Override
   public String toString() {

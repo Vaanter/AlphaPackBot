@@ -19,12 +19,15 @@ package com.vb.alphapackbot.commands;
 import com.google.common.collect.Lists;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
+import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.TypingManager;
+import io.quarkus.arc.Arc;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import org.jboss.logging.Logger;
@@ -34,17 +37,25 @@ public class OccurrenceCommand extends AbstractCommand {
   private static final Logger log = Logger.getLogger(OccurrenceCommand.class);
   private final RarityTypes requestedRarity;
 
-  public OccurrenceCommand(final GuildMessageReceivedEvent event,
-                           final Commands command,
-                           final RarityTypes requestedRarity,
-                           final Cache cache,
-                           final TypingManager typingManger) {
-    super(event, command, cache, typingManger);
+  public OccurrenceCommand(
+      final GuildMessageReceivedEvent event,
+      final Commands command,
+      final RarityTypes requestedRarity) {
+    super(
+        event.getAuthor().getId(),
+        event,
+        command,
+        Arc.container().instance(Properties.class).get(),
+        Arc.container().instance(Cache.class).get(),
+        Arc.container().instance(TypingManager.class).get());
     this.requestedRarity = requestedRarity;
   }
 
   @Override
   public void run() {
+    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
+    predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
+    List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);
     Optional<Message> result;
     if (command == Commands.FIRST) {
       result = getOccurrence(Lists.reverse(messages));

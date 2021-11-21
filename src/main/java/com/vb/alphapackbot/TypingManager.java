@@ -17,6 +17,7 @@
 package com.vb.alphapackbot;
 
 import com.google.common.collect.ConcurrentHashMultiset;
+import io.quarkus.arc.Unremovable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Singleton;
 import net.dv8tion.jda.api.entities.TextChannel;
 
+@Unremovable
 @Singleton
 public class TypingManager {
   private final ConcurrentHashMultiset<TextChannel> liveChannels = ConcurrentHashMultiset.create();

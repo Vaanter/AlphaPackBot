@@ -29,17 +29,19 @@ import javax.inject.Inject;
 
 @GrpcService
 public class AdminService extends AdminGrpc.AdminImplBase {
-  private static final Properties properties = Properties.getInstance();
+  final Properties properties;
   final Telemetry telemetry;
   final Event<ShutdownEvent> event;
   final Cache cache;
   final EventBus bus;
 
   @Inject
-  AdminService(final Telemetry telemetry,
+  AdminService(final Properties properties,
+               final Telemetry telemetry,
                final Event<ShutdownEvent> event,
                final Cache cache,
                final EventBus bus) {
+    this.properties = properties;
     this.telemetry = telemetry;
     this.event = event;
     this.cache = cache;

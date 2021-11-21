@@ -32,8 +32,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+import javax.inject.Inject;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -42,29 +45,26 @@ import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Base class for all Commands.
- */
+/** Base class for all Commands. */
 public abstract class AbstractCommand implements Runnable {
   private static final Logger log = Logger.getLogger(AbstractCommand.class);
   private static final int MAX_RETRIEVE_SIZE = 100;
-  protected static final Properties properties = Properties.getInstance();
-  final List<Message> messages;
+  final String authorId;
   final GuildMessageReceivedEvent event;
   final Commands command;
   final Cache cache;
   final TypingManager typingManager;
+  final Properties properties;
 
-  AbstractCommand(final GuildMessageReceivedEvent event,
-                  final Commands command,
-                  final Cache cache,
-                  final TypingManager typingManager) {
-    this.messages = getMessages(event.getChannel())
-        .stream()
-        .filter(x -> !x.getAttachments().isEmpty())
-        .filter(x -> x.getAuthor().getId().equals(event.getAuthor().getId()))
-        .filter(m -> !m.getContentRaw().contains("*ignored"))
-        .collect(Collectors.toList());
+  AbstractCommand(
+      final String authorId,
+      final GuildMessageReceivedEvent event,
+      final Commands command,
+      final Properties properties,
+      final Cache cache,
+      final TypingManager typingManager) {
+    this.properties = properties;
+    this.authorId = authorId;
     this.event = event;
     this.command = command;
     this.cache = cache;
@@ -100,6 +100,17 @@ public abstract class AbstractCommand implements Runnable {
       amount -= numToRetrieve;
     }
     return messages;
+  }
+
+  public @NotNull List<Message> getMessagesFromUserWithFilter(
+      @NotNull TextChannel channel,
+      @NotNull String authorId,
+      @NotNull Predicate<? super Message> filter) {
+    return getMessages(channel)
+        .stream()
+        .filter(x -> x.getAuthor().getId().equals(authorId))
+        .filter(filter)
+        .collect(Collectors.toList());
   }
 
   public void finish() {
@@ -145,8 +156,8 @@ public abstract class AbstractCommand implements Runnable {
    */
   @NotNull
   public RarityTypes computeRarity(@NotNull BufferedImage image) {
-    int width = (int) (image.getWidth() * 0.489583); //~940 @ FHD
-    int height = (int) (image.getHeight() * 0.83333); //~900 @ FHD
+    int width = (int) (image.getWidth() * 0.489583); // ~940 @ FHD
+    int height = (int) (image.getHeight() * 0.83333); // ~900 @ FHD
     Color color = new Color(image.getRGB(width, height));
     int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
     for (RarityTypes rarity : RarityTypes.values()) {

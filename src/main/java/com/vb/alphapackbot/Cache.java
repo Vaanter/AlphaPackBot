@@ -17,6 +17,7 @@
 package com.vb.alphapackbot;
 
 import java.util.Optional;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.jboss.logging.Logger;
 import redis.clients.jedis.Jedis;
@@ -27,14 +28,16 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 @Singleton
 public class Cache {
   private static final Logger log = Logger.getLogger(Cache.class);
-  private static final Properties properties = Properties.getInstance();
   private final JedisPool jedisPool;
   private boolean available;
+  final Properties properties;
 
   /**
    * Attempts to create a Redis cache connection. Sets corresponding flags according to result.
    */
-  public Cache() {
+  @Inject
+  public Cache(Properties properties) {
+    this.properties = properties;
     JedisPoolConfig config = new JedisPoolConfig();
     config.setBlockWhenExhausted(true);
     config.setMinIdle(1);
@@ -43,7 +46,9 @@ public class Cache {
     JedisPool jedisPool = null;
     Jedis jedis = null;
     try {
-      jedisPool = new JedisPool(config);
+      String redisHost = System.getProperty("redis-host", "redis");
+      String redisPort = System.getProperty("redis-port", "6379");
+      jedisPool = new JedisPool(config, redisHost, Integer.parseInt(redisPort));
       jedis = jedisPool.getResource();
       log.info("Redis connection established.");
       this.available = true;

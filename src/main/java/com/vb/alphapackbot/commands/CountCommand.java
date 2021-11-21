@@ -18,12 +18,15 @@ package com.vb.alphapackbot.commands;
 
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
+import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.TypingManager;
 import com.vb.alphapackbot.UserData;
+import io.quarkus.arc.Arc;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Predicate;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -33,16 +36,24 @@ import org.jetbrains.annotations.NotNull;
 public class CountCommand extends AbstractCommand {
   private static final Logger log = Logger.getLogger(CountCommand.class);
 
-  public CountCommand(final GuildMessageReceivedEvent event,
-                      final Commands command,
-                      final Cache cache,
-                      final TypingManager typingManager) {
-    super(event, command, cache, typingManager);
+  public CountCommand(
+      final String authorId,
+      final GuildMessageReceivedEvent event,
+      final Commands command) {
+    super(
+        authorId,
+        event,
+        command,
+        Arc.container().instance(Properties.class).get(),
+        Arc.container().instance(Cache.class).get(),
+        Arc.container().instance(TypingManager.class).get());
   }
 
   @Override
   public void run() {
-    String authorId = event.getAuthor().getId();
+    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
+    predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
+    List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);
     UserData userData = getRaritiesForUser(messages, authorId);
     printRarityPerUser(userData, event.getChannel());
     finish();
