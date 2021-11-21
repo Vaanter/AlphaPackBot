@@ -20,13 +20,10 @@ import com.google.common.base.Stopwatch;
 import java.time.Duration;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Singleton;
-import lombok.Getter;
 
 @Singleton
 public class Telemetry {
-  @Getter
   private final Stopwatch stopwatch = Stopwatch.createStarted();
-  @Getter
   private final LongAdder commandsReceived = new LongAdder();
 
 
@@ -56,5 +53,9 @@ public class Telemetry {
     builder.append("Uptime: ").append(formatUptime()).append("\n");
     builder.append("Commands received: ").append(commandsReceived);
     return builder.toString();
+  }
+
+  public LongAdder getCommandsReceived() {
+    return this.commandsReceived;
   }
 }

@@ -18,7 +18,6 @@ package com.vb.alphapackbot;
 
 import java.util.Optional;
 import javax.inject.Singleton;
-import lombok.Getter;
 import org.jboss.logging.Logger;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -30,7 +29,6 @@ public class Cache {
   private static final Logger log = Logger.getLogger(Cache.class);
   private static final Properties properties = Properties.getInstance();
   private final JedisPool jedisPool;
-  @Getter
   private boolean available;
 
   /**
@@ -86,5 +84,8 @@ public class Cache {
         jedis.set(key, value);
       }
     }
+  }
+  public boolean isAvailable() {
+    return this.available;
   }
 }

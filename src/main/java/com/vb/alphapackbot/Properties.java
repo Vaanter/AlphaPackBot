@@ -17,14 +17,10 @@
 package com.vb.alphapackbot;
 
 import java.util.concurrent.atomic.LongAdder;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Static properties class.
  */
-@Getter
-@Setter
 public class Properties {
   private static final Properties properties = new Properties();
   private final LongAdder processingCounter = new LongAdder();
@@ -54,5 +50,33 @@ public class Properties {
         + "\nRequests being processed: " + processingCounter.longValue()
         + "\nIs cache enabled: " + cacheEnabled
         + "\nIs printing enabled: " + isPrintingEnabled;
+  }
+
+  public LongAdder getProcessingCounter() {
+    return this.processingCounter;
+  }
+
+  public boolean isCacheEnabled() {
+    return this.cacheEnabled;
+  }
+
+  public boolean isPrintingEnabled() {
+    return this.isPrintingEnabled;
+  }
+
+  public boolean isBotEnabled() {
+    return this.isBotEnabled;
+  }
+
+  public void setCacheEnabled(boolean cacheEnabled) {
+    this.cacheEnabled = cacheEnabled;
+  }
+
+  public void setPrintingEnabled(boolean isPrintingEnabled) {
+    this.isPrintingEnabled = isPrintingEnabled;
+  }
+
+  public void setBotEnabled(boolean isBotEnabled) {
+    this.isBotEnabled = isBotEnabled;
   }
 }

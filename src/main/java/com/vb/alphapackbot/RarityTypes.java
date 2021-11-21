@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -40,7 +39,6 @@ public enum RarityTypes {
   private static final Map<String, RarityTypes> stringValues = Stream.of(values())
       .collect(Collectors.toMap(RarityTypes::toString, x -> x));
   private final String rarity;
-  @Getter
   private final ImmutableList<Range<Integer>> range;
 
   RarityTypes(String rarity) {
@@ -95,5 +93,9 @@ public enum RarityTypes {
   @Override
   public String toString() {
     return rarity;
+  }
+
+  public ImmutableList<Range<Integer>> getRange() {
+    return this.range;
   }
 }
