@@ -67,12 +67,13 @@ public class JdaManager implements QuarkusApplication {
 
   @Override
   public int run(final String... args) throws Exception {
-    if (args.length < 1) {
-      System.out.println("You must supply a bot token as a program argument.");
+    String token = System.getenv("TOKEN");
+    if (token == null) {
+      log.fatal("You must supply a bot token in environment variable 'TOKEN'.");
       System.exit(1);
     }
     try {
-      mainJda = initialize(args[0]);
+      mainJda = initialize(token);
     } catch (LoginException | InterruptedException e) {
       log.fatal(e);
       System.exit(1);
