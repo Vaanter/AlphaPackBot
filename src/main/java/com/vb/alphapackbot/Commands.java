@@ -16,10 +16,9 @@
 
 package com.vb.alphapackbot;
 
+import com.google.common.collect.ImmutableBiMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,8 +31,8 @@ public enum Commands {
   FIRST("first"),
   STATUS("status");
 
-  private static final Map<String, Commands> stringValues = Stream.of(values())
-      .collect(Collectors.toMap(Commands::toString, x -> x));
+  private static final ImmutableBiMap<Commands, String> stringValueMap = Stream.of(values())
+      .collect(ImmutableBiMap.toImmutableBiMap(x -> x, Commands::toString));
 
   private final String command;
 
@@ -45,7 +44,7 @@ public enum Commands {
     if (toParse != null) {
       toParse = toParse.toLowerCase(Locale.ROOT);
     }
-    return Optional.ofNullable(stringValues.getOrDefault(toParse, null));
+    return Optional.ofNullable(stringValueMap.inverse().getOrDefault(toParse, null));
   }
 
   @Override

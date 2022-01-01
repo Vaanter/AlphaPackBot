@@ -53,6 +53,7 @@ public class OccurrenceCommand extends AbstractCommand {
 
   @Override
   public void run() {
+    properties.getProcessingCounter().increment();
     Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
     predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
     List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);

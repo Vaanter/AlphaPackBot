@@ -25,11 +25,14 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Singleton;
 import net.dv8tion.jda.api.entities.TextChannel;
 
+/**
+ * Handles sending typing request to channels. Synchronized to prevent spamming the channels.
+ */
 @Unremovable
 @Singleton
 public class TypingManager {
-  private final ConcurrentHashMultiset<TextChannel> liveChannels = ConcurrentHashMultiset.create();
-  private final ConcurrentHashMap<TextChannel, ScheduledFuture<?>> channelFutures = new ConcurrentHashMap<>(0);
+  private final ConcurrentHashMultiset<TextChannel> typerCountPerChannel = ConcurrentHashMultiset.create();
+  private final ConcurrentHashMap<TextChannel, ScheduledFuture<?>> channelTyper = new ConcurrentHashMap<>(0);
   private final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(5);
 
   public TypingManager() {
@@ -37,24 +40,33 @@ public class TypingManager {
   }
 
   public synchronized void startIfNotRunning(TextChannel channel) {
-    if (!liveChannels.contains(channel)) {
+    if (!typerCountPerChannel.contains(channel)) {
       sendTyping(channel);
     }
-    liveChannels.add(channel);
+    typerCountPerChannel.add(channel);
   }
 
+  /**
+   * Create new typer ({@link ScheduledFuture}) and add it to the pool.
+   * @param textChannel channel to start the typer on
+   */
   private void sendTyping(TextChannel textChannel) {
     Runnable run = () -> textChannel.sendTyping().complete();
     ScheduledFuture<?> typer = executor.scheduleAtFixedRate(run, 0, 5, TimeUnit.SECONDS);
-    channelFutures.put(textChannel, typer);
+    channelTyper.put(textChannel, typer);
   }
 
+  /**
+   * Decrement number of typers ({@link ScheduledFuture}) for {@link TextChannel}, if
+   * the numbers is 0, stop the typer.
+   * @param textChannel channel to decrement typer count from
+   */
   public synchronized void cancelThread(TextChannel textChannel) {
-    liveChannels.remove(textChannel);
-    if (!liveChannels.contains(textChannel)) {
-      ScheduledFuture<?> typer = channelFutures.get(textChannel);
+    typerCountPerChannel.remove(textChannel);
+    if (!typerCountPerChannel.contains(textChannel)) {
+      ScheduledFuture<?> typer = channelTyper.get(textChannel);
       typer.cancel(true);
-      channelFutures.remove(textChannel);
+      channelTyper.remove(textChannel);
     }
   }
 }

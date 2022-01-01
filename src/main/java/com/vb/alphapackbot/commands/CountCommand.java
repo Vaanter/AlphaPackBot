@@ -51,6 +51,7 @@ public class CountCommand extends AbstractCommand {
 
   @Override
   public void run() {
+    properties.getProcessingCounter().increment();
     Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
     predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
     List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);
@@ -61,7 +62,7 @@ public class CountCommand extends AbstractCommand {
 
   /**
    * Obtains all rarity data for specific user.
-   * Check {@link CountCommand#computeRarity(BufferedImage)}
+   * Check {@link RarityTypes#computeRarity(BufferedImage)}
    *
    * @param messages Messages from which rarities will be extracted
    * @param authorId ID of request message author

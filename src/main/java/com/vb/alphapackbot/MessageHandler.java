@@ -99,7 +99,6 @@ public class MessageHandler extends ListenerAdapter {
             user.getId(),
             event,
             command.get());
-        properties.getProcessingCounter().increment();
         executor.execute(countCommand);
       }
     } else if (command.get() == Commands.STATUS) {
@@ -120,7 +119,6 @@ public class MessageHandler extends ListenerAdapter {
         return;
       }
       var occurrenceCommand = new OccurrenceCommand(event, command.get(), rarity.get());
-      properties.getProcessingCounter().increment();
       executor.execute(occurrenceCommand);
     }
   }

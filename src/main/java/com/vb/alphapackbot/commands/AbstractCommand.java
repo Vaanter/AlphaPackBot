@@ -16,15 +16,12 @@
 
 package com.vb.alphapackbot.commands;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
 import com.google.mu.util.concurrent.Retryer;
 import com.vb.alphapackbot.Cache;
 import com.vb.alphapackbot.Commands;
 import com.vb.alphapackbot.Properties;
 import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.TypingManager;
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,11 +29,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
-import javax.inject.Inject;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -113,13 +108,16 @@ public abstract class AbstractCommand implements Runnable {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Stop sending typing requests and decrement processing couter.
+   */
   public void finish() {
     typingManager.cancelThread(event.getChannel());
     properties.getProcessingCounter().decrement();
   }
 
   /**
-   * Attempts to load rarity from cache, if unsuccessful, computes the rarity from URL.
+   * Attempts to load rarity from cache, if unsuccessful, computes the rarity from Image from URL.
    *
    * @param message message containing the URL of image.
    * @return rarity extracted from image or loaded from cache.
@@ -138,7 +136,7 @@ public abstract class AbstractCommand implements Runnable {
       Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
       rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
       if (cachedValue.isEmpty()) {
-        rarity = computeRarity(loadImageFromUrl(messageUrl));
+        rarity = RarityTypes.computeRarity(loadImageFromUrl(messageUrl));
         cache.save(messageUrl, rarity.toString());
       }
     }
@@ -146,34 +144,6 @@ public abstract class AbstractCommand implements Runnable {
       log.infof("Unknown rarity in %s!", messageUrl);
     }
     return rarity;
-  }
-
-  /**
-   * Obtains RarityType value from image.
-   *
-   * @param image image to be processed
-   * @return Rarity from {@link RarityTypes}
-   */
-  @NotNull
-  public RarityTypes computeRarity(@NotNull BufferedImage image) {
-    int width = (int) (image.getWidth() * 0.489583); // ~940 @ FHD
-    int height = (int) (image.getHeight() * 0.83333); // ~900 @ FHD
-    Color color = new Color(image.getRGB(width, height));
-    int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
-    for (RarityTypes rarity : RarityTypes.values()) {
-      ImmutableList<Range<Integer>> range = rarity.getRange();
-      int hitCounter = 0;
-      for (int i = 0; i < 3; i++) {
-        if (range.get(i).contains(colors[i])) {
-          hitCounter += 1;
-        }
-      }
-      if (hitCounter == 3) {
-        return rarity;
-      }
-    }
-    log.infof("R: %d G: %d B: %d", colors[0], colors[1], colors[2]);
-    return RarityTypes.UNKNOWN;
   }
 
   /**
