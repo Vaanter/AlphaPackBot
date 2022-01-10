@@ -39,11 +39,16 @@ public class TypingManager {
     executor.setRemoveOnCancelPolicy(true);
   }
 
+  /**
+   * <p>Increment number of typers ({@link ScheduledFuture} for {@link TextChannel}.</p>
+   * <p>If the channel does not already have a typer, create it.</p>
+   * @param channel channel to increment typer count on
+   */
   public synchronized void startIfNotRunning(TextChannel channel) {
+    typerCountPerChannel.add(channel);
     if (!typerCountPerChannel.contains(channel)) {
       sendTyping(channel);
     }
-    typerCountPerChannel.add(channel);
   }
 
   /**

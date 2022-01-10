@@ -46,10 +46,23 @@ public enum RarityTypes {
   RarityTypes(@NotNull String rarity) {
     this.rarity = rarity;
     switch (rarity) {
-      case "Common" -> range = ImmutableList.of(ImmutableList.of(
-          Range.closed(60, 180),
-          Range.closed(60, 180),
-          Range.closed(60, 180)));
+      case "Common" -> range = ImmutableList.of(
+          // Old ranges
+          ImmutableList.of(
+              Range.closed(90, 100),
+              Range.closed(90, 100),
+              Range.closed(90, 100)),
+          // New ranges
+          ImmutableList.of(
+              Range.closed(160, 180),
+              Range.closed(160, 180),
+              Range.closed(160, 180)),
+          // New ranges duplicate
+          ImmutableList.of(
+              Range.closed(60, 80),
+              Range.closed(60, 80),
+              Range.closed(60, 80))
+      );
       case "Uncommon" -> range = ImmutableList.of(
           // Old ranges
           ImmutableList.of(
@@ -71,12 +84,20 @@ public enum RarityTypes {
           Range.closed(55, 105),
           Range.closed(135, 200),
           Range.closed(185, 255)));
-      case "Epic" -> range = ImmutableList.of(ImmutableList.of(
-          Range.closed(135, 185),
-          Range.closed(50, 90),
-          Range.closed(155, 210)));
+      case "Epic" -> range = ImmutableList.of(
+          // New ranges
+          ImmutableList.of(
+              Range.closed(135, 185),
+              Range.closed(50, 90),
+              Range.closed(155, 210)),
+          // New ranges duplicate
+          ImmutableList.of(
+              Range.closed(40, 50),
+              Range.closed(10, 20),
+              Range.closed(40, 60))
+      );
       case "Legendary" -> range = ImmutableList.of(ImmutableList.of(
-          Range.closed(235, 255),
+          Range.closed(230, 255),
           Range.closed(145, 170),
           Range.closed(5, 30)));
       default -> range = ImmutableList.of(ImmutableList.of(
@@ -98,17 +119,16 @@ public enum RarityTypes {
   }
 
   /**
-   * Obtains RarityType value from image.
+   * Obtains {@link RarityTypes} value from image.
    *
-   * @param image image to be processed
+   * @param image image to be extract rarity from
    * @return Rarity from {@link RarityTypes}
    */
   @NotNull
   public static RarityTypes computeRarity(@NotNull BufferedImage image) {
-    int width = (int) (image.getWidth() * 0.489583); // ~940 @ FHD
-    int height = (int) (image.getHeight() * 0.912037); // ~985 @ FHD
+    int width = (int) Math.round(image.getWidth() * 0.489583); // ~940 @ FHD
+    int height = (int) Math.round(image.getHeight() * 0.912037); // ~985 @ FHD
     Color color = new Color(image.getRGB(width, height));
-    color.brighter();
     int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
     RarityTypes computedRarity = RarityTypes.UNKNOWN;
     for (RarityTypes rarity : RarityTypes.values()) {
@@ -121,7 +141,7 @@ public enum RarityTypes {
     }
     // Old packs were checked from pixel at different height
     if (computedRarity == RarityTypes.UNKNOWN) {
-      height = (int) (image.getHeight() * 0.83333); // ~900 @ FHD
+      height = (int) Math.round(image.getHeight() * 0.83333); // ~900 @ FHD
       color = new Color(image.getRGB(width, height));
       colors = new int[]{color.getRed(), color.getGreen(), color.getBlue()};
       for (RarityTypes rarity : RarityTypes.values()) {
