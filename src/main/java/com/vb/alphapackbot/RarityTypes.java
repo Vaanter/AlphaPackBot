@@ -80,10 +80,18 @@ public enum RarityTypes {
               Range.closed(210, 220),
               Range.closed(135, 150))
       );
-      case "Rare" -> range = ImmutableList.of(ImmutableList.of(
-          Range.closed(55, 105),
-          Range.closed(135, 200),
-          Range.closed(185, 255)));
+      case "Rare" -> range = ImmutableList.of(
+          // New ranges
+          ImmutableList.of(
+              Range.closed(55, 105),
+              Range.closed(135, 200),
+              Range.closed(185, 255)),
+          // New ranges duplicate
+          ImmutableList.of(
+              Range.closed(30, 40),
+              Range.closed(60, 70),
+              Range.closed(75, 90))
+      );
       case "Epic" -> range = ImmutableList.of(
           // New ranges
           ImmutableList.of(

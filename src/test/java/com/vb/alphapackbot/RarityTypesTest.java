@@ -113,8 +113,14 @@ public class RarityTypesTest {
   }
 
   @Test
-  public void testComputeRarity_RareNewDupFull() throws IOException {
+  public void testComputeRarity_RareNewFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_new_full.png"));
+    Assertions.assertEquals(RarityTypes.computeRarity(image), RarityTypes.RARE);
+  }
+
+  @Test
+  public void testComputeRarity_RareNewDupFull() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_new_dup_full.png"));
     Assertions.assertEquals(RarityTypes.computeRarity(image), RarityTypes.RARE);
   }
 
