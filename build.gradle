@@ -39,10 +39,10 @@ dependencies {
     exclude module: 'opus-java'
   }
 
-  implementation "redis.clients:jedis:4.0.0"
+  implementation 'redis.clients:jedis:4.1.1'
 
-  implementation "com.google.guava:guava:31.0.1-jre"
-  implementation "com.google.mug:mug:5.7"
+  implementation 'com.google.guava:guava:31.1-jre'
+  implementation 'com.google.mug:mug:5.9'
   implementation "org.apache.commons:commons-lang3:3.12.0"
   errorprone("com.google.errorprone:error_prone_core:2.10.0")
 
@@ -50,7 +50,7 @@ dependencies {
 }
 
 group "com.vb.alphapackbot"
-version "4.3.2"
+version "4.4.0"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_17

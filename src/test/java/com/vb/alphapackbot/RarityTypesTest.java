@@ -16,7 +16,6 @@
 
 package com.vb.alphapackbot;
 
-import io.quarkus.test.junit.QuarkusTest;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +24,6 @@ import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-@QuarkusTest
 public class RarityTypesTest {
 
   @Test
@@ -150,7 +148,8 @@ public class RarityTypesTest {
 
   @Test
   public void testComputeRarity_LegendaryNewFullChinese() throws IOException {
-    BufferedImage image = ImageIO.read(new File("src/test/resources/Legendary_new_full_chinese.jpg"));
+    BufferedImage image =
+        ImageIO.read(new File("src/test/resources/Legendary_new_full_chinese.jpg"));
     Assertions.assertEquals(RarityTypes.computeRarity(image), RarityTypes.LEGENDARY);
   }
 }

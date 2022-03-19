@@ -76,9 +76,9 @@ public enum RarityTypes {
               Range.closed(50, 60)),
           // New ranges
           ImmutableList.of(
-              Range.closed(85, 95),
-              Range.closed(210, 220),
-              Range.closed(135, 150))
+              Range.closed(70, 95),
+              Range.closed(190, 220),
+              Range.closed(120, 150))
       );
       case "Rare" -> range = ImmutableList.of(
           // New ranges
@@ -104,10 +104,11 @@ public enum RarityTypes {
               Range.closed(10, 20),
               Range.closed(40, 60))
       );
+      // TODO Legendary duplicate
       case "Legendary" -> range = ImmutableList.of(ImmutableList.of(
-          Range.closed(230, 255),
-          Range.closed(145, 170),
-          Range.closed(5, 30)));
+          Range.closed(225, 255),
+          Range.closed(140, 170),
+          Range.closed(0, 30)));
       default -> range = ImmutableList.of(ImmutableList.of(
           Range.closed(0, 0),
           Range.closed(0, 0),

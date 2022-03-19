@@ -45,10 +45,10 @@ public class TypingManager {
    * @param channel channel to increment typer count on
    */
   public synchronized void startIfNotRunning(TextChannel channel) {
-    typerCountPerChannel.add(channel);
     if (!typerCountPerChannel.contains(channel)) {
       sendTyping(channel);
     }
+    typerCountPerChannel.add(channel);
   }
 
   /**
