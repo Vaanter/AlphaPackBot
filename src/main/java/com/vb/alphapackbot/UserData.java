@@ -21,9 +21,7 @@ import java.util.EnumMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * POJO holding IDs of author, channel and counts of rarities.
- */
+/** POJO holding IDs of author, channel and counts of rarities. */
 public class UserData {
   private final EnumMap<RarityTypes, Integer> rarityData;
   private final String authorId;
@@ -32,8 +30,7 @@ public class UserData {
     this(null, authorId);
   }
 
-  public UserData(@Nullable EnumMap<RarityTypes, Integer> rarityData,
-                  @NotNull String authorId) {
+  public UserData(@Nullable EnumMap<RarityTypes, Integer> rarityData, @NotNull String authorId) {
     if (rarityData == null) {
       ImmutableMap.Builder<RarityTypes, Integer> builder = ImmutableMap.builderWithExpectedSize(6);
       for (RarityTypes rarityType : RarityTypes.values()) {

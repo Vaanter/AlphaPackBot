@@ -67,6 +67,16 @@ public abstract class AbstractCommand implements Runnable {
     typingManager.startIfNotRunning(event.getChannel());
   }
 
+  public @NotNull List<Message> getMessagesFromUserWithFilter(
+      @NotNull TextChannel channel,
+      @NotNull String authorId,
+      @NotNull Predicate<? super Message> filter) {
+    return getMessages(channel).stream()
+        .filter(x -> x.getAuthor().getId().equals(authorId))
+        .filter(filter)
+        .collect(Collectors.toList());
+  }
+
   /**
    * Returns all messages from specific channel.
    *
@@ -97,20 +107,7 @@ public abstract class AbstractCommand implements Runnable {
     return messages;
   }
 
-  public @NotNull List<Message> getMessagesFromUserWithFilter(
-      @NotNull TextChannel channel,
-      @NotNull String authorId,
-      @NotNull Predicate<? super Message> filter) {
-    return getMessages(channel)
-        .stream()
-        .filter(x -> x.getAuthor().getId().equals(authorId))
-        .filter(filter)
-        .collect(Collectors.toList());
-  }
-
-  /**
-   * Stop sending typing requests and decrement processing couter.
-   */
+  /** Stop sending typing requests and decrement processing couter. */
   public void finish() {
     typingManager.cancelThread(event.getChannel());
     properties.getProcessingCounter().decrement();
@@ -137,7 +134,9 @@ public abstract class AbstractCommand implements Runnable {
       rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
       if (cachedValue.isEmpty()) {
         rarity = RarityTypes.computeRarity(loadImageFromUrl(messageUrl));
-        cache.save(messageUrl, rarity.toString());
+        if (rarity != RarityTypes.UNKNOWN) {
+          cache.save(messageUrl, rarity.toString());
+        }
       }
     }
     if (rarity == RarityTypes.UNKNOWN) {

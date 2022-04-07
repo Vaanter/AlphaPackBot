@@ -101,8 +101,6 @@ public class OccurrenceCommand extends AbstractCommand {
         + " at " + timeCreated.getHour() + ":" + timeCreated.getMinute() + "\n"
         + "link: " + message.getJumpUrl() + ".";
 
-    System.out.println(reply);
-
     if (properties.isPrintingEnabled()) {
       event.getMessage().reply(reply).complete();
     }
