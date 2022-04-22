@@ -16,97 +16,131 @@
 
 package com.vb.alphapackbot.commands;
 
-import com.vb.alphapackbot.Cache;
-import com.vb.alphapackbot.Commands;
-import com.vb.alphapackbot.Properties;
+import com.google.common.base.Stopwatch;
+import com.jagrosh.jdautilities.command.Command;
+import com.jagrosh.jdautilities.command.CommandEvent;
+import com.vb.alphapackbot.CommandService;
 import com.vb.alphapackbot.RarityTypes;
-import com.vb.alphapackbot.TypingManager;
 import com.vb.alphapackbot.UserData;
-import io.quarkus.arc.Arc;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
+import io.quarkus.logging.Log;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
-import org.jboss.logging.Logger;
+import net.dv8tion.jda.api.entities.User;
 import org.jetbrains.annotations.NotNull;
 
-public class CountCommand extends AbstractCommand {
-  private static final Logger log = Logger.getLogger(CountCommand.class);
+@Singleton
+public class CountCommand extends Command {
 
-  public CountCommand(
-      final String authorId,
-      final GuildMessageReceivedEvent event,
-      final Commands command) {
-    super(
-        authorId,
-        event,
-        command,
-        Arc.container().instance(Properties.class).get(),
-        Arc.container().instance(Cache.class).get(),
-        Arc.container().instance(TypingManager.class).get());
+  @Inject CommandService commandService;
+
+  public CountCommand() {
+    this.name = "count";
+    this.help = "Counts amount of skins per rarity";
+    this.guildOnly = true;
   }
 
   @Override
-  public void run() {
-    properties.getProcessingCounter().increment();
-    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
-    predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
-    List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);
-    UserData userData = getRaritiesForUser(messages, authorId);
-    printRarityPerUser(userData, event.getChannel());
-    finish();
-  }
-
-  /**
-   * Obtains all rarity data for specific user.
-   * Check {@link RarityTypes#computeRarity(BufferedImage)}
-   *
-   * @param messages Messages from which rarities will be extracted
-   * @param authorId ID of request message author
-   * @return returns {@link UserData} containing count of all rarities from user.
-   */
-  public UserData getRaritiesForUser(@NotNull List<Message> messages, @NotNull String authorId) {
-    UserData userData = new UserData(authorId);
-    for (Message message : messages) {
-      try {
-        RarityTypes rarity = loadOrComputeRarity(message);
-        userData.increment(rarity);
-      } catch (IOException e) {
-        log.error("Exception getting image!", e);
-      }
-    }
-    return userData;
-  }
-
-  /**
-   * Sends message to channel if enabled.
-   *
-   * @param userData Data to be printed
-   * @param channel Channel to print data to
-   */
-  public void printRarityPerUser(@NotNull UserData userData, @NotNull TextChannel channel) {
-    if (!properties.isPrintingEnabled()) {
+  protected void execute(CommandEvent event) {
+    if (event.getAuthor().isBot()) {
       return;
     }
-    int total = userData.getRarityData().get(RarityTypes.COMMON)
-        + userData.getRarityData().get(RarityTypes.UNCOMMON)
-        + userData.getRarityData().get(RarityTypes.RARE)
-        + userData.getRarityData().get(RarityTypes.EPIC)
-        + userData.getRarityData().get(RarityTypes.LEGENDARY)
-        + userData.getRarityData().get(RarityTypes.UNKNOWN);
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    event.getMessage().addReaction("U+1F44D").complete();
+    HashSet<User> mentions = accumulateUsers(event);
+    List<CompletableFuture<Void>> userFutures = new ArrayList<>();
+    for (User user : mentions) {
+      userFutures.add(
+          CompletableFuture.runAsync(
+              () -> {
+                commandService.startTyping(event.getTextChannel());
+                UserData userData = countPerUser(user, event.getTextChannel());
+                printRarityPerUser(userData, event.getMessage());
+                commandService.stopTyping(event.getTextChannel());
+              }));
+    }
+    userFutures.forEach(CompletableFuture::join);
+    Log.info("Time elapsed: " + stopwatch.elapsed());
+  }
 
-    String message = "<@" + userData.getAuthorId() + ">\n"
-        + "Total: " + total + " \n"
-        + RarityTypes.COMMON + ": " + userData.getRarityData().get(RarityTypes.COMMON) + "\n"
-        + RarityTypes.UNCOMMON + ": " + userData.getRarityData().get(RarityTypes.UNCOMMON) + "\n"
-        + RarityTypes.RARE + ": " + userData.getRarityData().get(RarityTypes.RARE) + "\n"
-        + RarityTypes.EPIC + ": " + userData.getRarityData().get(RarityTypes.EPIC) + "\n"
-        + RarityTypes.LEGENDARY + ": " + userData.getRarityData().get(RarityTypes.LEGENDARY) + "\n"
-        + RarityTypes.UNKNOWN + ": " + userData.getRarityData().get(RarityTypes.UNKNOWN);
+  @NotNull
+  private HashSet<User> accumulateUsers(@NotNull CommandEvent event) {
+    HashSet<User> mentions = new HashSet<>();
+    if (!event.getMessage().getMentionedRoles().isEmpty()) {
+      event.getGuild().getMembersWithRoles(event.getMessage().getMentionedRoles()).stream()
+          .map(Member::getUser)
+          .forEach(mentions::add);
+    }
+    if (!event.getMessage().getMentionedUsers().isEmpty()) {
+      mentions.addAll(event.getMessage().getMentionedUsers());
+    }
+    if (mentions.isEmpty()) {
+      mentions.add(event.getAuthor());
+    }
+    return mentions;
+  }
 
-    channel.sendMessage(message).complete();
+  private UserData countPerUser(@NotNull User user, @NotNull TextChannel channel) {
+    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
+    predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
+    List<Message> messages =
+        commandService.getMessagesFromUserWithFilter(channel, user.getId(), predicate);
+    return commandService.getRaritiesForUser(messages, user.getId());
+  }
+
+  /**
+   * Sends a message with rarity counts to a channel.
+   *
+   * @param userData Data to be printed
+   * @param message Message to reply to
+   */
+  public void printRarityPerUser(@NotNull UserData userData, @NotNull Message message) {
+    int total =
+        userData.getRarityData().get(RarityTypes.COMMON)
+            + userData.getRarityData().get(RarityTypes.UNCOMMON)
+            + userData.getRarityData().get(RarityTypes.RARE)
+            + userData.getRarityData().get(RarityTypes.EPIC)
+            + userData.getRarityData().get(RarityTypes.LEGENDARY)
+            + userData.getRarityData().get(RarityTypes.UNKNOWN);
+
+    String reply =
+        "<@"
+            + userData.getAuthorId()
+            + ">\n"
+            + "Total: "
+            + total
+            + " \n"
+            + RarityTypes.COMMON
+            + ": "
+            + userData.getRarityData().get(RarityTypes.COMMON)
+            + "\n"
+            + RarityTypes.UNCOMMON
+            + ": "
+            + userData.getRarityData().get(RarityTypes.UNCOMMON)
+            + "\n"
+            + RarityTypes.RARE
+            + ": "
+            + userData.getRarityData().get(RarityTypes.RARE)
+            + "\n"
+            + RarityTypes.EPIC
+            + ": "
+            + userData.getRarityData().get(RarityTypes.EPIC)
+            + "\n"
+            + RarityTypes.LEGENDARY
+            + ": "
+            + userData.getRarityData().get(RarityTypes.LEGENDARY)
+            + "\n"
+            + RarityTypes.UNKNOWN
+            + ": "
+            + userData.getRarityData().get(RarityTypes.UNKNOWN);
+
+    message.reply(reply).queue();
   }
 }

@@ -16,105 +16,55 @@
 
 package com.vb.alphapackbot;
 
-import io.grpc.Status;
-import io.quarkus.runtime.Quarkus;
-import io.quarkus.runtime.QuarkusApplication;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.vertx.ConsumeEvent;
-import io.smallrye.mutiny.Uni;
-import javax.enterprise.event.Observes;
+import com.jagrosh.jdautilities.command.Command;
+import com.jagrosh.jdautilities.command.CommandClientBuilder;
+import javax.annotation.Nullable;
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Activity;
 import org.jboss.logging.Logger;
 
-public class JdaManager implements QuarkusApplication {
+public class JdaManager {
   private static final Logger log = Logger.getLogger(JdaManager.class);
 
-  private JDA mainJda;
-
-  final MessageHandler messageHandler;
-
-  @Inject
-  JdaManager(final MessageHandler messageHandler) {
-    this.messageHandler = messageHandler;
-  }
+  @Inject Instance<Command> commands;
 
   /**
-   * Attempts to initialize and build a JDA with provided token.
+   * Attempts to initialize and build a JDA with token from environment variable 'TOKEN'.
    *
-   * @param token Bot token required for authorization.
-   * @return An instance of {@link JDA} representing the bot.
-   * @throws LoginException if provided token is invalid.
-   * @throws InterruptedException if the thread gets interrupted while constructing the JDA
+   * @return An instance of {@link JDA} representing the bot API, or null.
    */
-  public JDA initialize(final String token) throws LoginException, InterruptedException {
-    final JDABuilder jda = JDABuilder
-        .createLight(token)
-        .addEventListeners(messageHandler);
-    try {
-      final JDA mainJda = jda.build();
-      mainJda.awaitReady();
-      return mainJda;
-    } catch (LoginException e) {
-      throw new LoginException("Invalid token!");
-    } catch (InterruptedException e) {
-      throw new InterruptedException("Interrupted while getting ready!");
-    }
-  }
-
-  @Override
-  public int run(final String... args) throws Exception {
+  @Produces
+  @Singleton
+  @Nullable
+  public JDA createJda() {
     String token = System.getenv("TOKEN");
     if (token == null) {
       log.fatal("You must supply a bot token in environment variable 'TOKEN'.");
-      System.exit(1);
+      return null;
     }
+    final JDABuilder builder = JDABuilder.createLight(token);
     try {
-      mainJda = initialize(token);
-    } catch (LoginException | InterruptedException e) {
-      log.fatal(e);
-      System.exit(1);
+      var commandClient =
+          new CommandClientBuilder()
+              .setPrefix("*pack ")
+              .setOwnerId(355011687495237632L)
+              .addCommands(commands.stream().toArray(Command[]::new))
+              .build();
+      final JDA jda = builder
+          .addEventListeners(commandClient)
+          .build();
+      jda.awaitReady();
+      return jda;
+    } catch (LoginException e) {
+      log.fatal("Invalid token", e);
+    } catch (InterruptedException e) {
+      log.fatal("Interrupted while JDA is getting ready!", e);
     }
-    Quarkus.waitForExit();
-    return 0;
-  }
-
-  void onStop(@Observes ShutdownEvent ev) {
-    if (mainJda != null) {
-      mainJda.shutdownNow();
-    }
-  }
-
-  /**
-   * Listens for 'set-activity' event to change the activity status of the bot.
-
-   * @param request contains the new activity type and activity text if applicable.
-   * @return {@link Uni} containing the result as a {@link Status}
-   */
-  @ConsumeEvent(value = "set-activity")
-  public Uni<Status> setActivity(BotStatusRequest request) {
-    switch (request.getType()) {
-      case PLAYING:
-        mainJda.getPresence().setActivity(Activity.playing(request.getName()));
-        break;
-      case COMPETING:
-        mainJda.getPresence().setActivity(Activity.competing(request.getName()));
-        break;
-      case LISTENING:
-        mainJda.getPresence().setActivity(Activity.listening(request.getName()));
-        break;
-      case WATCHING:
-        mainJda.getPresence().setActivity(Activity.watching(request.getName()));
-        break;
-      case CLEAR:
-        mainJda.getPresence().setActivity(null);
-        break;
-      default:
-        return Uni.createFrom().item(() -> Status.INVALID_ARGUMENT);
-    }
-    return Uni.createFrom().item(() -> Status.OK);
+    return null;
   }
 }

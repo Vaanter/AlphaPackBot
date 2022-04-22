@@ -16,16 +16,4 @@
 
 package com.vb.alphapackbot;
 
-import io.quarkus.runtime.Quarkus;
-import io.quarkus.runtime.annotations.QuarkusMain;
-
-@QuarkusMain
-public class Main {
-  static {
-    System.setProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager");
-  }
-
-  public static void main(String[] args) {
-    Quarkus.run(Application.class, args);
-  }
-}
+public class CountCommandTest {}

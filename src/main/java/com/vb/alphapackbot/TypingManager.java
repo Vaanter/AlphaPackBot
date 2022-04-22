@@ -55,7 +55,7 @@ public class TypingManager {
    * Create new typer ({@link ScheduledFuture}) and add it to the pool.
    * @param textChannel channel to start the typer on
    */
-  private void sendTyping(TextChannel textChannel) {
+  private synchronized void sendTyping(TextChannel textChannel) {
     Runnable run = () -> textChannel.sendTyping().complete();
     ScheduledFuture<?> typer = executor.scheduleAtFixedRate(run, 0, 5, TimeUnit.SECONDS);
     channelTyper.put(textChannel, typer);
