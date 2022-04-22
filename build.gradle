@@ -28,6 +28,7 @@ repositories {
     name 'm2-dv8tion'
     url 'https://m2.dv8tion.net/releases'
   }
+  maven { url "https://m2.chew.pro/releases" }
 }
 
 dependencies {
@@ -40,6 +41,7 @@ dependencies {
   }
 
   implementation 'redis.clients:jedis:4.1.1'
+  implementation 'pw.chew:jda-chewtils:1.24.1'
 
   implementation 'com.google.guava:guava:31.1-jre'
   implementation 'com.google.mug:mug:5.9'
