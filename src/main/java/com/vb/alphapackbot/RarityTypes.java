@@ -21,6 +21,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -133,26 +135,24 @@ public enum RarityTypes {
    * @param image image to be extract rarity from
    * @return Rarity from {@link RarityTypes}
    */
+
   @NotNull
   public static RarityTypes computeRarity(@NotNull BufferedImage image) {
-    int width = (int) Math.round(image.getWidth() * 0.489583); // ~940 @ FHD
-    int height = (int) Math.round(image.getHeight() * 0.912037); // ~985 @ FHD
-    Color color = new Color(image.getRGB(width, height));
-    int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
+    final int variationsCount = 3;
+    final List<Integer> widths = new ArrayList<>(variationsCount);
+    widths.add((int) Math.round(image.getWidth() * 0.489583));
+    widths.add((int) Math.round(image.getWidth() * 0.489583));
+    widths.add((int) Math.round(image.getWidth() * 0.52083));
+
+    final List<Integer> heights = new ArrayList<>(variationsCount);
+    heights.add((int) Math.round(image.getHeight() * 0.912037));
+    heights.add((int) Math.round(image.getHeight() * 0.83333));
+    heights.add((int) Math.round(image.getHeight() * 0.907407));
+
     RarityTypes computedRarity = RarityTypes.UNKNOWN;
-    for (RarityTypes rarity : RarityTypes.values()) {
-      if (checkRarityInPixel(rarity, colors)) {
-        computedRarity = rarity;
-      }
-      if (computedRarity != RarityTypes.UNKNOWN) {
-        break;
-      }
-    }
-    // Old packs were checked from pixel at different height
-    if (computedRarity == RarityTypes.UNKNOWN) {
-      height = (int) Math.round(image.getHeight() * 0.83333); // ~900 @ FHD
-      color = new Color(image.getRGB(width, height));
-      colors = new int[]{color.getRed(), color.getGreen(), color.getBlue()};
+    for (int i = 0; i < variationsCount; i++) {
+      Color color = new Color(image.getRGB(widths.get(i), heights.get(i)));
+      int[] colors = {color.getRed(), color.getGreen(), color.getBlue()};
       for (RarityTypes rarity : RarityTypes.values()) {
         if (checkRarityInPixel(rarity, colors)) {
           computedRarity = rarity;
@@ -170,7 +170,7 @@ public enum RarityTypes {
    * @return true colors match the rarity, false otherwise
    */
   private static boolean checkRarityInPixel(RarityTypes rarity, int[] colors) {
-    for (var ranges: rarity.getRanges()) {
+    for (ImmutableList<Range<Integer>> ranges: rarity.getRanges()) {
       int hitCounter = 0;
       // Loop through color ranges checking for match
       for (int i = 0; i < 3; i++) {
