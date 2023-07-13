@@ -173,6 +173,12 @@ public class RarityTypesTest {
   }
 
   @Test
+  public void testComputeRarity_LegendaryNewNewSearchFull() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Legendary_newnew_search_full.png"));
+    Assertions.assertEquals(RarityTypes.LEGENDARY, RarityTypes.computeRarity(image));
+  }
+
+  @Test
   public void testComputeRarity_LegendaryNewFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Legendary_new_full.png"));
     Assertions.assertEquals(RarityTypes.LEGENDARY, RarityTypes.computeRarity(image));
