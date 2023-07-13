@@ -76,8 +76,8 @@ public class OccurrenceCommand extends AbstractCommand {
   private Optional<Message> getOccurrence(List<Message> messages) {
     for (Message message : messages) {
       try {
-        RarityTypes rarity = loadOrComputeRarity(message);
-        if (rarity == requestedRarity) {
+        List<RarityTypes> rarities = loadOrComputeRarity(message);
+        if (rarities.contains(requestedRarity)) {
           return Optional.of(message);
         }
       } catch (IOException e) {

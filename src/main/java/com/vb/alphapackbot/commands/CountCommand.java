@@ -72,8 +72,8 @@ public class CountCommand extends AbstractCommand {
     UserData userData = new UserData(authorId);
     for (Message message : messages) {
       try {
-        RarityTypes rarity = loadOrComputeRarity(message);
-        userData.increment(rarity);
+        List<RarityTypes> rarities = loadOrComputeRarity(message);
+        rarities.forEach(userData::increment);
       } catch (IOException e) {
         log.error("Exception getting image!", e);
       }

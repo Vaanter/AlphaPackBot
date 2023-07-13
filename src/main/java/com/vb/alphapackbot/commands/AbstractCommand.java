@@ -120,29 +120,33 @@ public abstract class AbstractCommand implements Runnable {
    * @return rarity extracted from image or loaded from cache.
    * @throws IOException if an I/O exception occurs.
    */
-  public RarityTypes loadOrComputeRarity(Message message) throws IOException {
-    String messageUrl = message.getAttachments().get(0).getUrl();
-    RarityTypes rarity = null;
-    if (!message.getContentRaw().isEmpty() && message.getContentRaw().startsWith("*")) {
-      Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
-      if (forcedRarity.isPresent()) {
-        rarity = forcedRarity.get();
-      }
-    }
-    if (rarity == null) {
-      Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
-      rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
-      if (cachedValue.isEmpty()) {
-        rarity = RarityTypes.computeRarity(loadImageFromUrl(messageUrl));
-        if (rarity != RarityTypes.UNKNOWN) {
-          cache.save(messageUrl, rarity.toString());
+  public List<RarityTypes> loadOrComputeRarity(Message message) throws IOException {
+    List<RarityTypes> attachments_rarities = new ArrayList<>(message.getAttachments().size());
+    for (var attachment: message.getAttachments()) {
+      String messageUrl = attachment.getUrl();
+      RarityTypes rarity = null;
+      if (!message.getContentRaw().isEmpty() && message.getContentRaw().startsWith("*")) {
+        Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
+        if (forcedRarity.isPresent()) {
+          rarity = forcedRarity.get();
         }
       }
+      if (rarity == null) {
+        Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
+        rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
+        if (cachedValue.isEmpty()) {
+          rarity = RarityTypes.computeRarity(loadImageFromUrl(messageUrl));
+          if (rarity != RarityTypes.UNKNOWN) {
+            cache.save(messageUrl, rarity.toString());
+          }
+        }
+      }
+      if (rarity == RarityTypes.UNKNOWN) {
+        log.infof("Unknown rarity in %s!", messageUrl);
+      }
+      attachments_rarities.add(rarity);
     }
-    if (rarity == RarityTypes.UNKNOWN) {
-      log.infof("Unknown rarity in %s!", messageUrl);
-    }
-    return rarity;
+    return attachments_rarities;
   }
 
   /**
