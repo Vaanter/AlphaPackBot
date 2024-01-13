@@ -35,16 +35,16 @@ dependencies {
   implementation "io.quarkus:quarkus-grpc"
   implementation "io.quarkus:quarkus-arc"
 
-  implementation('net.dv8tion:JDA:4.3.0_293') {
+  implementation("net.dv8tion:JDA:4.4.1_353") {
     exclude module: 'opus-java'
   }
 
-  implementation 'redis.clients:jedis:4.1.1'
+  implementation 'redis.clients:jedis:5.1.0'
 
-  implementation 'com.google.guava:guava:31.1-jre'
-  implementation 'com.google.mug:mug:5.9'
-  implementation "org.apache.commons:commons-lang3:3.12.0"
-  errorprone("com.google.errorprone:error_prone_core:2.18.0")
+  implementation 'com.google.guava:guava:33.0-jre'
+  implementation 'com.google.mug:mug:7.1'
+  implementation "org.apache.commons:commons-lang3:3.14.0"
+  errorprone("com.google.errorprone:error_prone_core:2.24.1")
 
   testImplementation "io.quarkus:quarkus-junit5"
 }
@@ -53,8 +53,8 @@ group "com.vb.alphapackbot"
 version "4.4.0"
 
 java {
-  sourceCompatibility = JavaVersion.VERSION_17
-  targetCompatibility = JavaVersion.VERSION_17
+  sourceCompatibility = JavaVersion.VERSION_21
+  targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.withType(JavaCompile) {

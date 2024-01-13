@@ -19,7 +19,7 @@ package com.vb.alphapackbot;
 import com.google.common.base.Stopwatch;
 import java.time.Duration;
 import java.util.concurrent.atomic.LongAdder;
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 @Singleton
 public class Telemetry {

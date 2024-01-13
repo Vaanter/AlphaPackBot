@@ -22,8 +22,8 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -97,23 +97,14 @@ public class JdaManager implements QuarkusApplication {
   @ConsumeEvent(value = "set-activity")
   public Uni<Status> setActivity(BotStatusRequest request) {
     switch (request.getType()) {
-      case PLAYING:
-        mainJda.getPresence().setActivity(Activity.playing(request.getName()));
-        break;
-      case COMPETING:
-        mainJda.getPresence().setActivity(Activity.competing(request.getName()));
-        break;
-      case LISTENING:
-        mainJda.getPresence().setActivity(Activity.listening(request.getName()));
-        break;
-      case WATCHING:
-        mainJda.getPresence().setActivity(Activity.watching(request.getName()));
-        break;
-      case CLEAR:
-        mainJda.getPresence().setActivity(null);
-        break;
-      default:
+      case PLAYING -> mainJda.getPresence().setActivity(Activity.playing(request.getName()));
+      case COMPETING -> mainJda.getPresence().setActivity(Activity.competing(request.getName()));
+      case LISTENING -> mainJda.getPresence().setActivity(Activity.listening(request.getName()));
+      case WATCHING -> mainJda.getPresence().setActivity(Activity.watching(request.getName()));
+      case CLEAR -> mainJda.getPresence().setActivity(null);
+      default -> {
         return Uni.createFrom().item(() -> Status.INVALID_ARGUMENT);
+      }
     }
     return Uni.createFrom().item(() -> Status.OK);
   }

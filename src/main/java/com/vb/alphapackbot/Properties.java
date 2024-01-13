@@ -17,7 +17,7 @@
 package com.vb.alphapackbot;
 
 import java.util.concurrent.atomic.LongAdder;
-import javax.inject.Singleton;
+import jakarta.inject.Singleton;
 
 /**
  * Singleton properties bean.
