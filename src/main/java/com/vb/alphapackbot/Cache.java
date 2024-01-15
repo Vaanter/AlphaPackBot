@@ -17,8 +17,8 @@
 package com.vb.alphapackbot;
 
 import java.util.Optional;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;

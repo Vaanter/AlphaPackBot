@@ -18,8 +18,8 @@ package com.vb.alphapackbot.commands;
 
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.vb.alphapackbot.CommandService;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 @Singleton
 public final class LastOccurrenceCommand extends OccurenceCommand {

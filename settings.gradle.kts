@@ -15,13 +15,17 @@
  */
 
 pluginManagement {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-    plugins {
-        id "${quarkusPluginId}" version "${quarkusPluginVersion}"
+    pluginManagement {
+        val quarkusPluginVersion: String by settings
+        val quarkusPluginId: String by settings
+        repositories {
+            mavenCentral()
+            gradlePluginPortal()
+            mavenLocal()
+        }
+        plugins {
+            id(quarkusPluginId) version quarkusPluginVersion
+        }
     }
 }
-rootProject.name='AlphaPackBot'
+rootProject.name = "AlphaPackBot"

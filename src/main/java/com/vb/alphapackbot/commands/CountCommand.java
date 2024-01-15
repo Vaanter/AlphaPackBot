@@ -26,10 +26,11 @@ import io.quarkus.logging.Log;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -54,7 +55,7 @@ public class CountCommand extends Command {
     }
     Stopwatch stopwatch = Stopwatch.createStarted();
     event.getMessage().addReaction("U+1F44D").complete();
-    HashSet<User> mentions = accumulateUsers(event);
+    Set<User> mentions = accumulateUsers(event);
     List<CompletableFuture<Void>> userFutures = new ArrayList<>();
     for (User user : mentions) {
       userFutures.add(
@@ -71,8 +72,8 @@ public class CountCommand extends Command {
   }
 
   @NotNull
-  private HashSet<User> accumulateUsers(@NotNull CommandEvent event) {
-    HashSet<User> mentions = new HashSet<>();
+  private Set<User> accumulateUsers(@NotNull CommandEvent event) {
+    Set<User> mentions = new HashSet<>();
     if (!event.getMessage().getMentionedRoles().isEmpty()) {
       event.getGuild().getMembersWithRoles(event.getMessage().getMentionedRoles()).stream()
           .map(Member::getUser)

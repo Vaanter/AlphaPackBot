@@ -23,8 +23,8 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Activity;
 
