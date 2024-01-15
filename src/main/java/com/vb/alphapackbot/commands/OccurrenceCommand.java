@@ -25,6 +25,7 @@ import com.vb.alphapackbot.TypingManager;
 import io.quarkus.arc.Arc;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -35,6 +36,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class OccurrenceCommand extends AbstractCommand {
   private static final Logger log = Logger.getLogger(OccurrenceCommand.class);
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+  private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
   private final RarityTypes requestedRarity;
 
   public OccurrenceCommand(
@@ -96,13 +99,13 @@ public class OccurrenceCommand extends AbstractCommand {
     OffsetDateTime timeCreated = message.getTimeCreated();
     String reply = "You opened your " + command.toString() + " "
         + requestedRarity.toString() + " on "
-        + timeCreated.getDayOfMonth() + "." + timeCreated.getMonth().getValue()
-        + "." + timeCreated.getYear()
-        + " at " + timeCreated.getHour() + ":" + timeCreated.getMinute() + "\n"
+        + timeCreated.format(DATE_FORMATTER)
+        + " at " + timeCreated.format(TIME_FORMATTER) + "\n"
         + "link: " + message.getJumpUrl() + ".";
 
     if (properties.isPrintingEnabled()) {
-      event.getMessage().reply(reply).complete();
+      Message msg = event.getMessage().reply(reply).complete();
+      msg.suppressEmbeds(true).complete();
     }
   }
 }

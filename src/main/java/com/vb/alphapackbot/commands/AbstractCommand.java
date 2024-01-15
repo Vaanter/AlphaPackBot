@@ -25,7 +25,7 @@ import com.vb.alphapackbot.TypingManager;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -83,7 +83,7 @@ public abstract class AbstractCommand implements Runnable {
    * @param channel channel to get messages from
    * @return ArrayList of messages
    */
-  private @NotNull ArrayList<Message> getMessages(@NotNull TextChannel channel) {
+  private @NotNull List<Message> getMessages(@NotNull TextChannel channel) {
     ArrayList<Message> messages = new ArrayList<>();
     MessageHistory history = channel.getHistory();
     int amount = Integer.MAX_VALUE;
@@ -150,14 +150,14 @@ public abstract class AbstractCommand implements Runnable {
   }
 
   /**
-   * Loads image from an URL into a BufferedImage.
+   * Loads image from a URL into a BufferedImage.
    *
    * @param imageUrl URL from which to load image
    * @return {@link BufferedImage}
    * @throws IOException if an I/O exception occurs.
    */
   public BufferedImage loadImageFromUrl(@NotNull String imageUrl) throws IOException {
-    try (InputStream in = new URL(imageUrl).openStream()) {
+    try (InputStream in = URI.create(imageUrl).toURL().openStream()) {
       return ImageIO.read(in);
     }
   }
