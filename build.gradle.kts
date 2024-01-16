@@ -30,6 +30,9 @@ repositories {
     name = "m2-dv8tion"
     url = uri("https://m2.dv8tion.net/releases")
   }
+  maven {
+    url = uri("https://m2.chew.pro/releases")
+  }
 }
 
 val quarkusPlatformGroupId: String by project
@@ -46,6 +49,7 @@ dependencies {
   }
 
   implementation("redis.clients:jedis:5.1.0")
+  implementation("pw.chew:jda-chewtils:1.24.1")
 
   implementation("com.google.guava:guava:33.0-jre")
   implementation("com.google.mug:mug:7.1")

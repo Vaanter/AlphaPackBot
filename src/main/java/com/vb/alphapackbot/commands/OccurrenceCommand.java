@@ -16,96 +16,112 @@
 
 package com.vb.alphapackbot.commands;
 
-import com.google.common.collect.Lists;
-import com.vb.alphapackbot.Cache;
-import com.vb.alphapackbot.Commands;
-import com.vb.alphapackbot.Properties;
+import com.jagrosh.jdautilities.command.Command;
+import com.jagrosh.jdautilities.command.CommandEvent;
+import com.vb.alphapackbot.CommandService;
 import com.vb.alphapackbot.RarityTypes;
-import com.vb.alphapackbot.TypingManager;
-import io.quarkus.arc.Arc;
-import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import net.dv8tion.jda.api.entities.IMentionable;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.entities.Message.MentionType;
+import net.dv8tion.jda.api.entities.User;
 import org.jboss.logging.Logger;
-import org.jetbrains.annotations.NotNull;
 
-public class OccurrenceCommand extends AbstractCommand {
-  private static final Logger log = Logger.getLogger(OccurrenceCommand.class);
-  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-  private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-  private final RarityTypes requestedRarity;
+public abstract sealed class OccurrenceCommand extends Command
+    permits FirstOccurrenceCommand, LastOccurrenceCommand {
+  private static final Logger LOG = Logger.getLogger(OccurrenceCommand.class);
 
-  public OccurrenceCommand(
-      final GuildMessageReceivedEvent event,
-      final Commands command,
-      final RarityTypes requestedRarity) {
-    super(
-        event.getAuthor().getId(),
-        event,
-        command,
-        Arc.container().instance(Properties.class).get(),
-        Arc.container().instance(Cache.class).get(),
-        Arc.container().instance(TypingManager.class).get());
-    this.requestedRarity = requestedRarity;
-  }
+  protected enum Type {
+    FIRST("first"),
+    LAST("last");
 
-  @Override
-  public void run() {
-    properties.getProcessingCounter().increment();
-    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty();
-    predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
-    List<Message> messages = getMessagesFromUserWithFilter(event.getChannel(), authorId, predicate);
-    Optional<Message> result;
-    if (command == Commands.FIRST) {
-      result = getOccurrence(Lists.reverse(messages));
-    } else {
-      result = getOccurrence(messages);
+    private final String type;
+
+    Type(String type) {
+      this.type = type;
     }
-    result.ifPresent(this::printOccurrence);
-    finish();
+
+    public String getType() {
+      return type;
+    }
   }
 
   /**
-   * Finds first occurrence of rarity.
+   * Sends a reply with the occurrence of requested rarity.
    *
-   * @param messages list of messages in which the rarity is searched
-   * @return {@link Optional} of message (empty if specified rarity is not present)
+   * @param requestMessage message to reply to
+   * @param occurrenceMessage message of the occurrence
+   * @param requestedRarity rarity specified in the request
    */
-  private Optional<Message> getOccurrence(List<Message> messages) {
-    for (Message message : messages) {
-      try {
-        List<RarityTypes> rarities = loadOrComputeRarity(message);
-        if (rarities.contains(requestedRarity)) {
-          return Optional.of(message);
+  protected void replyOccurrence(
+      Message requestMessage, Message occurrenceMessage, RarityTypes requestedRarity, Type type) {
+    OffsetDateTime timeCreated = occurrenceMessage.getTimeCreated();
+    String date = timeCreated.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+    String time = timeCreated.format(DateTimeFormatter.ofPattern("HH:mm"));
+
+    String reply =
+        String.format(
+            "You opened your %s %s on %s at %s\n link: %s.",
+            type.getType(), requestedRarity, date, time, occurrenceMessage.getJumpUrl());
+
+    requestMessage.reply(reply).queue(message -> message.suppressEmbeds(true).queue());
+  }
+
+  /**
+   * Sends a reply informing that specified rarity has not been found.
+   *
+   * @param requestMessage original message of the request
+   * @param requestedRarity rarity specified in the request
+   */
+  protected void replyNotFound(Message requestMessage, RarityTypes requestedRarity) {
+    String reply = "You have never opened " + requestedRarity.toString() + "!";
+    requestMessage.reply(reply).queue();
+  }
+
+  protected void doCommand(Type type, CommandEvent event, CommandService commandService) {
+    commandService.startTyping(event.getTextChannel());
+    String arg = event.getMessage().getMentions(MentionType.values()).stream()
+        .map(IMentionable::getAsMention).reduce(event.getArgs(), (a, m) -> a.replaceAll(m, ""));
+    Optional<RarityTypes> requestedRarity = RarityTypes.parse(arg.trim().strip());
+    if (requestedRarity.isEmpty()) {
+      event.getMessage().addReaction("U+1F44E").complete();
+      String invalidRarity =
+          """
+          Invalid rarity, acceptable rarities: Common, Uncommon, Rare, Epic, Legendary, Unknown
+          """;
+      event.getMessage().reply(invalidRarity).queue();
+      commandService.stopTyping(event.getTextChannel());
+      return;
+    }
+
+    event.getMessage().addReaction("U+1F44D").complete();
+
+    Predicate<Message> predicate = x -> !x.getAttachments().isEmpty() && !x.getContentRaw()
+        .contains("*ignored");
+    Set<User> mentions = commandService.accumulateUsers(event);
+    List<CompletableFuture<Void>> userFutures = new ArrayList<>();
+    for (User user : mentions) {
+      userFutures.add(CompletableFuture.runAsync(() -> {
+        List<Message> messages = commandService.getMessagesFromUserWithFilter(
+            event.getTextChannel(), user.getId(), predicate);
+        boolean reversed = type == Type.LAST;
+        Optional<Message> requestedMessage = commandService.getOccurrence(messages,
+            requestedRarity.get(), reversed);
+        if (requestedMessage.isPresent()) {
+          replyOccurrence(event.getMessage(), requestedMessage.get(), requestedRarity.get(), type);
+        } else {
+          replyNotFound(event.getMessage(), requestedRarity.get());
         }
-      } catch (IOException e) {
-        log.error("Exception getting an image!", e);
-      }
+        commandService.stopTyping(event.getTextChannel());
+      }));
     }
-    return Optional.empty();
-  }
-
-  /**
-   * Prints occurrence to console and sends message to channel if enabled.
-   *
-   * @param message message of the occurrence
-   */
-  private void printOccurrence(@NotNull Message message) {
-    OffsetDateTime timeCreated = message.getTimeCreated();
-    String reply = "You opened your " + command.toString() + " "
-        + requestedRarity.toString() + " on "
-        + timeCreated.format(DATE_FORMATTER)
-        + " at " + timeCreated.format(TIME_FORMATTER) + "\n"
-        + "link: " + message.getJumpUrl() + ".";
-
-    if (properties.isPrintingEnabled()) {
-      Message msg = event.getMessage().reply(reply).complete();
-      msg.suppressEmbeds(true).complete();
-    }
+    userFutures.forEach(CompletableFuture::join);
   }
 }

@@ -76,6 +76,12 @@ public enum RarityTypes {
               Range.closed(40, 55),
               Range.closed(75, 90),
               Range.closed(50, 60)),
+          // Newer ranges duplicate
+          new ColorRanges(
+              Range.closed(60, 70),
+              Range.closed(140, 150),
+              Range.closed(90, 110)
+          ),
           // New ranges
           new ColorRanges(
               Range.closed(70, 95),
@@ -110,7 +116,7 @@ public enum RarityTypes {
           new ColorRanges(
               Range.closed(125, 185),
               Range.closed(50, 90),
-              Range.closed(145, 210)),
+              Range.closed(140, 210)),
           // New ranges duplicate
           new ColorRanges(
               Range.closed(40, 50),
