@@ -17,24 +17,27 @@
 package com.vb.alphapackbot;
 
 import com.google.mu.util.concurrent.Retryer;
+import com.jagrosh.jdautilities.command.CommandEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import jakarta.enterprise.context.ApplicationScoped;
 import javax.imageio.ImageIO;
 import jakarta.inject.Inject;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +46,6 @@ import org.jetbrains.annotations.NotNull;
 public class CommandService {
   private static final Logger log = Logger.getLogger(CommandService.class);
   private static final int MAX_RETRIEVE_SIZE = 100;
-  private final ExecutorService commandExecutor = Executors.newFixedThreadPool(30);
   @Inject Cache cache;
   @Inject TypingManager typingManager;
 
@@ -51,7 +53,7 @@ public class CommandService {
    * Retrieves filtered messages from a channel sent by a specific user.
    *
    * @param channel channel to fetch messages from
-   * @param authorId user ID whose messagese to fetch
+   * @param authorId user ID whose messages to fetch
    * @param filter filter applied on all messages
    * @return {@link List} of messages
    */
@@ -71,8 +73,8 @@ public class CommandService {
    * @param channel channel to get messages from
    * @return ArrayList of messages
    */
-  private @NotNull ArrayList<Message> getMessages(@NotNull TextChannel channel) {
-    ArrayList<Message> messages = new ArrayList<>();
+  private @NotNull List<Message> getMessages(@NotNull TextChannel channel) {
+    List<Message> messages = new ArrayList<>();
     MessageHistory history = channel.getHistory();
     int amount = Integer.MAX_VALUE;
 
@@ -118,17 +120,32 @@ public class CommandService {
    */
   public UserData getRaritiesForUser(@NotNull List<Message> messages, @NotNull String authorId) {
     UserData userData = new UserData(authorId);
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (Message message : messages) {
-      futures.add(
-          CompletableFuture.runAsync(
-              () -> {
-                RarityTypes rarity = loadOrComputeRarity(message);
-                userData.increment(rarity);
-              }));
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      for (Message message : messages) {
+        executor.submit(() -> {
+          RarityTypes rarity = loadOrComputeRarity(message);
+          userData.increment(rarity);
+        });
+      }
     }
-    futures.forEach(CompletableFuture::join);
     return userData;
+  }
+
+  @NotNull
+  public Set<User> accumulateUsers(@NotNull CommandEvent event) {
+    Set<User> mentions = new HashSet<>();
+    if (!event.getMessage().getMentionedRoles().isEmpty()) {
+      event.getGuild().getMembersWithRoles(event.getMessage().getMentionedRoles()).stream()
+          .map(Member::getUser)
+          .forEach(mentions::add);
+    }
+    if (!event.getMessage().getMentionedUsers().isEmpty()) {
+      mentions.addAll(event.getMessage().getMentionedUsers());
+    }
+    if (mentions.isEmpty()) {
+      mentions.add(event.getAuthor());
+    }
+    return mentions;
   }
 
   /**
@@ -138,7 +155,7 @@ public class CommandService {
    * @return rarity extracted from image or loaded from cache.
    */
   private RarityTypes loadOrComputeRarity(Message message) {
-    String messageUrl = message.getAttachments().get(0).getUrl();
+    String messageUrl = message.getAttachments().getFirst().getUrl();
     RarityTypes rarity = null;
     if (!message.getContentRaw().isEmpty() && message.getContentRaw().startsWith("*")) {
       Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
@@ -167,14 +184,14 @@ public class CommandService {
   }
 
   /**
-   * Loads image from an URL into a BufferedImage.
+   * Loads image from a URL into a BufferedImage.
    *
    * @param imageUrl URL from which to load image
    * @return {@link BufferedImage}
    * @throws IOException if an I/O exception occurs.
    */
   private BufferedImage loadImageFromUrl(@NotNull String imageUrl) throws IOException {
-    try (InputStream in = new URL(imageUrl).openStream()) {
+    try (InputStream in = URI.create(imageUrl).toURL().openStream()) {
       return ImageIO.read(in);
     }
   }
@@ -190,11 +207,11 @@ public class CommandService {
   public Optional<Message> getOccurrence(
       List<Message> messages, RarityTypes requestedRarity, boolean reverse) {
     return reverse
-        ? getOccurenceLast(messages, requestedRarity)
-        : getOccurenceFirst(messages, requestedRarity);
+        ? getOccurrenceLast(messages, requestedRarity)
+        : getOccurrenceFirst(messages, requestedRarity);
   }
 
-  private Optional<Message> getOccurenceLast(List<Message> messages, RarityTypes requestedRarity) {
+  private Optional<Message> getOccurrenceLast(List<Message> messages, RarityTypes requestedRarity) {
     for (Message message : messages) {
       RarityTypes rarity = loadOrComputeRarity(message);
       if (rarity == requestedRarity) {
@@ -204,7 +221,7 @@ public class CommandService {
     return Optional.empty();
   }
 
-  private Optional<Message> getOccurenceFirst(List<Message> messages, RarityTypes requestedRarity) {
+  private Optional<Message> getOccurrenceFirst(List<Message> messages, RarityTypes requestedRarity) {
     for (int i = messages.size() - 1; i > 0; i--) {
       RarityTypes rarity = loadOrComputeRarity(messages.get(i));
       if (rarity == requestedRarity) {

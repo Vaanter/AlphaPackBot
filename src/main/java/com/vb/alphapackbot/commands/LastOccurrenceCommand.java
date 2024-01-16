@@ -22,7 +22,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 @Singleton
-public final class LastOccurrenceCommand extends OccurenceCommand {
+public final class LastOccurrenceCommand extends OccurrenceCommand {
 
   @Inject CommandService commandService;
 

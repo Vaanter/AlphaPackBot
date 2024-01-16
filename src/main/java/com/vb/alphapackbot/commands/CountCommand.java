@@ -24,14 +24,12 @@ import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.UserData;
 import io.quarkus.logging.Log;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -55,7 +53,7 @@ public class CountCommand extends Command {
     }
     Stopwatch stopwatch = Stopwatch.createStarted();
     event.getMessage().addReaction("U+1F44D").complete();
-    Set<User> mentions = accumulateUsers(event);
+    Set<User> mentions = commandService.accumulateUsers(event);
     List<CompletableFuture<Void>> userFutures = new ArrayList<>();
     for (User user : mentions) {
       userFutures.add(
@@ -69,23 +67,6 @@ public class CountCommand extends Command {
     }
     userFutures.forEach(CompletableFuture::join);
     Log.info("Time elapsed: " + stopwatch.elapsed());
-  }
-
-  @NotNull
-  private Set<User> accumulateUsers(@NotNull CommandEvent event) {
-    Set<User> mentions = new HashSet<>();
-    if (!event.getMessage().getMentionedRoles().isEmpty()) {
-      event.getGuild().getMembersWithRoles(event.getMessage().getMentionedRoles()).stream()
-          .map(Member::getUser)
-          .forEach(mentions::add);
-    }
-    if (!event.getMessage().getMentionedUsers().isEmpty()) {
-      mentions.addAll(event.getMessage().getMentionedUsers());
-    }
-    if (mentions.isEmpty()) {
-      mentions.add(event.getAuthor());
-    }
-    return mentions;
   }
 
   private UserData countPerUser(@NotNull User user, @NotNull TextChannel channel) {
