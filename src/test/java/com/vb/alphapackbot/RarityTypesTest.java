@@ -33,6 +33,12 @@ public class RarityTypesTest {
   }
 
   @Test
+  public void testComputeRarity_CommonOldFull2() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Common_old_full2.jpg"));
+    Assertions.assertEquals(RarityTypes.COMMON, RarityTypes.computeRarity(image));
+  }
+
+  @Test
   public void testComputeRarity_UncommonOldFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Uncommon_old_full.png"));
     Assertions.assertEquals(RarityTypes.UNCOMMON, RarityTypes.computeRarity(image));
@@ -41,6 +47,12 @@ public class RarityTypesTest {
   @Test
   public void testComputeRarity_RareOldFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_old_full.png"));
+    Assertions.assertEquals(RarityTypes.RARE, RarityTypes.computeRarity(image));
+  }
+
+  @Test
+  public void testComputeRarity_RareOldFull2() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_old_full2.jpg"));
     Assertions.assertEquals(RarityTypes.RARE, RarityTypes.computeRarity(image));
   }
 
@@ -83,6 +95,12 @@ public class RarityTypesTest {
   @Test
   public void testComputeRarity_LegendaryOldFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Legendary_old_full.png"));
+    Assertions.assertEquals(RarityTypes.LEGENDARY, RarityTypes.computeRarity(image));
+  }
+
+  @Test
+  public void testComputeRarity_LegendaryOldFull2() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Legendary_old_full2.jpg"));
     Assertions.assertEquals(RarityTypes.LEGENDARY, RarityTypes.computeRarity(image));
   }
 
@@ -137,6 +155,12 @@ public class RarityTypesTest {
   @Test
   public void testComputeRarity_RareNewNewFull() throws IOException {
     BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_newnew_full.png"));
+    Assertions.assertEquals(RarityTypes.RARE, RarityTypes.computeRarity(image));
+  }
+
+  @Test
+  public void testComputeRarity_RareNewNewDupFull() throws IOException {
+    BufferedImage image = ImageIO.read(new File("src/test/resources/Rare_newnew_dup_full.jpg"));
     Assertions.assertEquals(RarityTypes.RARE, RarityTypes.computeRarity(image));
   }
 

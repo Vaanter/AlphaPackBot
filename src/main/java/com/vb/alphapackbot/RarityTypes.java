@@ -42,6 +42,7 @@ public enum RarityTypes {
 
   private static final ImmutableBiMap<RarityTypes, String> stringValueMap = Stream.of(values())
       .collect(ImmutableBiMap.toImmutableBiMap(x -> x, RarityTypes::toString));
+  private static final int MAX_COLOR_DISTANCE = 3;
   private final String rarity;
   private final ImmutableList<ColorRanges> colorRanges;
 
@@ -51,9 +52,9 @@ public enum RarityTypes {
       case "Common" -> colorRanges = ImmutableList.of(
           // Old ranges
           new ColorRanges(
-              Range.closed(90, 100),
-              Range.closed(90, 100),
-              Range.closed(90, 100)),
+              Range.closed(80, 100),
+              Range.closed(80, 100),
+              Range.closed(80, 100)),
           // New ranges
           new ColorRanges(
               Range.closed(160, 180),
@@ -107,8 +108,8 @@ public enum RarityTypes {
           // Duplicates
           new ColorRanges(
               Range.closed(45, 55),
-              Range.closed(105, 115),
-              Range.closed(140, 155)
+              Range.closed(105, 125),
+              Range.closed(140, 165)
           )
       );
       case "Epic" -> colorRanges = ImmutableList.of(
@@ -163,7 +164,7 @@ public enum RarityTypes {
 
     final List<Integer> heights = new ArrayList<>(variationsCount);
     heights.add((int) Math.round(image.getHeight() * 0.907407)); // 980
-    heights.add((int) Math.round(image.getHeight() * 0.83333)); // 900
+    heights.add((int) Math.round(image.getHeight() * 0.8287)); // 895
     heights.add((int) Math.round(image.getHeight() * 0.912037)); // 985
 
     RarityTypes computedRarity = RarityTypes.UNKNOWN;
@@ -192,15 +193,19 @@ public enum RarityTypes {
     for (ColorRanges ranges : rarity.getRanges()) {
       if (ranges.red().contains(color.getRed()) && ranges.green().contains(color.getGreen())
           && ranges.blue().contains(color.getBlue())) {
-        // If rarity is common, all color must match
-        if (rarity == RarityTypes.COMMON && (color.getRed() != color.getGreen()
-            || color.getRed() != color.getBlue())) {
+        if (rarity == RarityTypes.COMMON && !checkCommonColorDistance(color)) {
           continue;
         }
         return true;
       }
     }
     return false;
+  }
+
+  private static boolean checkCommonColorDistance(Color color) {
+    return Math.abs(color.getRed() - color.getGreen()) < MAX_COLOR_DISTANCE
+        && Math.abs(color.getRed() - color.getBlue()) < MAX_COLOR_DISTANCE
+        && Math.abs(color.getGreen() - color.getBlue()) < MAX_COLOR_DISTANCE;
   }
 
   @Override
