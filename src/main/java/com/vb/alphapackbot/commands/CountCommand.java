@@ -23,13 +23,13 @@ import com.vb.alphapackbot.CommandService;
 import com.vb.alphapackbot.RarityTypes;
 import com.vb.alphapackbot.UserData;
 import io.quarkus.logging.Log;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -74,7 +74,7 @@ public class CountCommand extends Command {
     predicate = predicate.and(x -> !x.getContentRaw().contains("*ignored"));
     List<Message> messages =
         commandService.getMessagesFromUserWithFilter(channel, user.getId(), predicate);
-    return commandService.getRaritiesForUser(messages, user.getId());
+    return commandService.getRaritiesFromMessages(messages, user.getId());
   }
 
   /**

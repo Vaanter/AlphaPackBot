@@ -18,11 +18,14 @@ package com.vb.alphapackbot;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.EnumMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** POJO holding IDs of author, channel and counts of rarities. */
 public class UserData {
+  private final Lock lock = new ReentrantLock();
   private final EnumMap<RarityTypes, Integer> rarityData;
   private final String authorId;
 
@@ -56,6 +59,11 @@ public class UserData {
    * @param rarity rarity to increment
    */
   public void increment(RarityTypes rarity) {
-    rarityData.replace(rarity, rarityData.get(rarity) + 1);
+    lock.lock();
+    try {
+      rarityData.replace(rarity, rarityData.get(rarity) + 1);
+    } finally {
+      lock.unlock();
+    }
   }
 }

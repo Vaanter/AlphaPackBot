@@ -57,23 +57,14 @@ public class Application implements QuarkusApplication {
   @ConsumeEvent(value = "set-activity")
   public Uni<Status> setActivity(BotStatusRequest request) {
     switch (request.getType()) {
-      case PLAYING:
-        jda.getPresence().setActivity(Activity.playing(request.getName()));
-        break;
-      case COMPETING:
-        jda.getPresence().setActivity(Activity.competing(request.getName()));
-        break;
-      case LISTENING:
-        jda.getPresence().setActivity(Activity.listening(request.getName()));
-        break;
-      case WATCHING:
-        jda.getPresence().setActivity(Activity.watching(request.getName()));
-        break;
-      case CLEAR:
-        jda.getPresence().setActivity(null);
-        break;
-      default:
+      case PLAYING -> jda.getPresence().setActivity(Activity.playing(request.getName()));
+      case COMPETING -> jda.getPresence().setActivity(Activity.competing(request.getName()));
+      case LISTENING -> jda.getPresence().setActivity(Activity.listening(request.getName()));
+      case WATCHING -> jda.getPresence().setActivity(Activity.watching(request.getName()));
+      case CLEAR -> jda.getPresence().setActivity(null);
+      default -> {
         return Uni.createFrom().item(() -> Status.INVALID_ARGUMENT);
+      }
     }
     return Uni.createFrom().item(() -> Status.OK);
   }

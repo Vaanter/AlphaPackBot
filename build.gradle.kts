@@ -53,7 +53,7 @@ dependencies {
 
   implementation("com.google.guava:guava:33.0-jre")
   implementation("com.google.mug:mug:7.1")
-    implementation("org.apache.commons:commons-lang3:3.14.0")
+  implementation("org.apache.commons:commons-lang3:3.14.0")
   errorprone("com.google.errorprone:error_prone_core:2.24.1")
 
   testImplementation("io.quarkus:quarkus-junit5")

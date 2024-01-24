@@ -18,23 +18,30 @@ package com.vb.alphapackbot;
 
 import com.google.mu.util.concurrent.Retryer;
 import com.jagrosh.jdautilities.command.CommandEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import jakarta.enterprise.context.ApplicationScoped;
 import javax.imageio.ImageIO;
-import jakarta.inject.Inject;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.MessageHistory;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -44,17 +51,21 @@ import org.jetbrains.annotations.NotNull;
 
 @ApplicationScoped
 public class CommandService {
+
   private static final Logger log = Logger.getLogger(CommandService.class);
   private static final int MAX_RETRIEVE_SIZE = 100;
+  private static final ExecutorService imageLoaderExecutor = Executors.newFixedThreadPool(
+      Runtime.getRuntime().availableProcessors() * 2);
+  private static final Semaphore processingLimiter = new Semaphore(MAX_RETRIEVE_SIZE);
   @Inject Cache cache;
   @Inject TypingManager typingManager;
 
   /**
    * Retrieves filtered messages from a channel sent by a specific user.
    *
-   * @param channel channel to fetch messages from
+   * @param channel  channel to fetch messages from
    * @param authorId user ID whose messages to fetch
-   * @param filter filter applied on all messages
+   * @param filter   filter applied on all messages
    * @return {@link List} of messages
    */
   public @NotNull List<Message> getMessagesFromUserWithFilter(
@@ -111,21 +122,36 @@ public class CommandService {
   }
 
   /**
-   * Obtains all rarity data for specific user. Check {@link
-   * RarityTypes#computeRarity(BufferedImage)}
+   * Obtains all rarity data for specific user. Check
+   * {@link RarityTypes#computeRarity(BufferedImage)}
    *
    * @param messages Messages from which rarities will be extracted
    * @param authorId ID of request message author
    * @return returns {@link UserData} containing count of all rarities from user.
    */
-  public UserData getRaritiesForUser(@NotNull List<Message> messages, @NotNull String authorId) {
+  public UserData getRaritiesFromMessages(@NotNull List<Message> messages,
+      @NotNull String authorId) {
     UserData userData = new UserData(authorId);
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       for (Message message : messages) {
-        executor.submit(() -> {
-          RarityTypes rarity = loadOrComputeRarity(message);
-          userData.increment(rarity);
-        });
+        List<Attachment> attachments = message.getAttachments();
+        for (Attachment attachment : attachments) {
+          try {
+            processingLimiter.acquire();
+          } catch (InterruptedException e) {
+            log.error("Failed to acquire semaphore permit, interrupted!", e);
+            continue;
+          }
+          executor.submit(() -> {
+            try {
+              RarityTypes rarity = loadOrComputeImageRarityFromUrl(attachment.getUrl(),
+                  message.getContentRaw());
+              userData.increment(rarity);
+            } finally {
+              processingLimiter.release();
+            }
+          });
+        }
       }
     }
     return userData;
@@ -151,37 +177,48 @@ public class CommandService {
   /**
    * Attempts to load rarity from cache, if unsuccessful, computes the rarity from Image from URL.
    *
-   * @param message message containing the URL of image.
+   * @param imageUrl       URL where the image is stored
+   * @param messageContent text from a message
    * @return rarity extracted from image or loaded from cache.
    */
-  private RarityTypes loadOrComputeRarity(Message message) {
-    String messageUrl = message.getAttachments().getFirst().getUrl();
+  private RarityTypes loadOrComputeImageRarityFromUrl(String imageUrl, String messageContent) {
     RarityTypes rarity = null;
-    if (!message.getContentRaw().isEmpty() && message.getContentRaw().startsWith("*")) {
-      Optional<RarityTypes> forcedRarity = RarityTypes.parse(message.getContentRaw().substring(1));
+    if (messageContent.startsWith("*")) {
+      Optional<RarityTypes> forcedRarity = RarityTypes.parse(messageContent.substring(1));
       if (forcedRarity.isPresent()) {
         rarity = forcedRarity.get();
       }
     }
     if (rarity == null) {
-      Optional<RarityTypes> cachedValue = cache.getAndParse(messageUrl);
-      rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
-      if (cachedValue.isEmpty()) {
-        try {
-          rarity = RarityTypes.computeRarity(loadImageFromUrl(messageUrl));
-          if (rarity != RarityTypes.UNKNOWN) {
-            cache.save(messageUrl, rarity.toString());
-          }
-        } catch (IOException e) {
-          log.error("Exception getting an image!", e);
-        }
-      }
+      rarity = retrieveRarityFromUrl(imageUrl);
     }
     if (rarity == RarityTypes.UNKNOWN) {
-      log.infof("Unknown rarity in %s!", messageUrl);
+      log.infof("Unknown rarity in %s!", imageUrl);
     }
     return rarity;
   }
+
+  @NotNull
+  public RarityTypes retrieveRarityFromUrl(@NotNull String imageUrl) {
+    RarityTypes rarity;
+    Optional<RarityTypes> cachedValue = cache.getAndParse(imageUrl);
+    rarity = cachedValue.orElse(RarityTypes.UNKNOWN);
+    if (cachedValue.isEmpty()) {
+      try {
+        BufferedImage bufferedImage = new Retryer().upon(ConnectException.class,
+                Retryer.Delay.ofMillis(3000).exponentialBackoff(1, 3))
+            .retryBlockingly(() -> loadImageFromUrl(imageUrl));
+        rarity = RarityTypes.computeRarity(bufferedImage);
+        if (rarity != RarityTypes.UNKNOWN) {
+          cache.save(imageUrl, rarity.toString());
+        }
+      } catch (Exception e) {
+        log.error("Failed to retrieve an image!", e);
+      }
+    }
+    return rarity;
+  }
+
 
   /**
    * Loads image from a URL into a BufferedImage.
@@ -192,16 +229,24 @@ public class CommandService {
    */
   private BufferedImage loadImageFromUrl(@NotNull String imageUrl) throws IOException {
     try (InputStream in = URI.create(imageUrl).toURL().openStream()) {
-      return ImageIO.read(in);
+      byte[] imageData = in.readAllBytes();
+      Future<BufferedImage> imageLoading = imageLoaderExecutor.submit(() -> {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageData)) {
+          return ImageIO.read(bais);
+        }
+      });
+      return imageLoading.get();
+    } catch (ExecutionException | InterruptedException e) {
+      throw new IOException("Failed to parse an image!", e);
     }
   }
 
   /**
    * Finds the occurrence of rarity.
    *
-   * @param messages list of messages in which the rarity is searched
+   * @param messages        list of messages in which the rarity is searched
    * @param requestedRarity rarity to find
-   * @param reverse if true iterates over messages in reverse order
+   * @param reverse         if true iterates over messages in reverse order
    * @return {@link Optional} of message (empty if specified rarity is not present)
    */
   public Optional<Message> getOccurrence(
@@ -213,19 +258,27 @@ public class CommandService {
 
   private Optional<Message> getOccurrenceLast(List<Message> messages, RarityTypes requestedRarity) {
     for (Message message : messages) {
-      RarityTypes rarity = loadOrComputeRarity(message);
-      if (rarity == requestedRarity) {
-        return Optional.of(message);
+      for (Attachment attachment : message.getAttachments()) {
+        RarityTypes rarity = loadOrComputeImageRarityFromUrl(attachment.getUrl(),
+            message.getContentRaw());
+        if (rarity == requestedRarity) {
+          return Optional.of(message);
+        }
       }
     }
     return Optional.empty();
   }
 
-  private Optional<Message> getOccurrenceFirst(List<Message> messages, RarityTypes requestedRarity) {
+  private Optional<Message> getOccurrenceFirst(List<Message> messages,
+      RarityTypes requestedRarity) {
     for (int i = messages.size() - 1; i > 0; i--) {
-      RarityTypes rarity = loadOrComputeRarity(messages.get(i));
-      if (rarity == requestedRarity) {
-        return Optional.of(messages.get(i));
+      Message message = messages.get(i);
+      for (Attachment attachment : message.getAttachments()) {
+        RarityTypes rarity = loadOrComputeImageRarityFromUrl(attachment.getUrl(),
+            message.getContentRaw());
+        if (rarity == requestedRarity) {
+          return Optional.of(message);
+        }
       }
     }
     return Optional.empty();
