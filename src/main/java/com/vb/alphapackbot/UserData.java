@@ -66,4 +66,8 @@ public class UserData {
       lock.unlock();
     }
   }
+
+  public int getRarityCount(RarityTypes rarity) {
+    return rarityData.getOrDefault(rarity, 0);
+  }
 }

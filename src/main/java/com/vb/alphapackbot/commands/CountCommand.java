@@ -25,6 +25,7 @@ import com.vb.alphapackbot.UserData;
 import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -80,48 +81,47 @@ public class CountCommand extends Command {
   /**
    * Sends a message with rarity counts to a channel.
    *
-   * @param userData Data to be printed
-   * @param message Message to reply to
+   * @param userData holds the information about user whose packs were counted and also the counts
+   *                 themselves
+   * @param message  Message which initiated this count, sent message will reply to this message
    */
   public void printRarityPerUser(@NotNull UserData userData, @NotNull Message message) {
     int total =
-        userData.getRarityData().get(RarityTypes.COMMON)
-            + userData.getRarityData().get(RarityTypes.UNCOMMON)
-            + userData.getRarityData().get(RarityTypes.RARE)
-            + userData.getRarityData().get(RarityTypes.EPIC)
-            + userData.getRarityData().get(RarityTypes.LEGENDARY)
-            + userData.getRarityData().get(RarityTypes.UNKNOWN);
+        userData.getRarityCount(RarityTypes.COMMON)
+            + userData.getRarityCount(RarityTypes.UNCOMMON)
+            + userData.getRarityCount(RarityTypes.RARE)
+            + userData.getRarityCount(RarityTypes.EPIC)
+            + userData.getRarityCount(RarityTypes.LEGENDARY)
+            + userData.getRarityCount(RarityTypes.UNKNOWN);
 
-    String reply =
-        "<@"
-            + userData.getAuthorId()
-            + ">\n"
-            + "Total: "
-            + total
-            + " \n"
-            + RarityTypes.COMMON
-            + ": "
-            + userData.getRarityData().get(RarityTypes.COMMON)
-            + "\n"
-            + RarityTypes.UNCOMMON
-            + ": "
-            + userData.getRarityData().get(RarityTypes.UNCOMMON)
-            + "\n"
-            + RarityTypes.RARE
-            + ": "
-            + userData.getRarityData().get(RarityTypes.RARE)
-            + "\n"
-            + RarityTypes.EPIC
-            + ": "
-            + userData.getRarityData().get(RarityTypes.EPIC)
-            + "\n"
-            + RarityTypes.LEGENDARY
-            + ": "
-            + userData.getRarityData().get(RarityTypes.LEGENDARY)
-            + "\n"
-            + RarityTypes.UNKNOWN
-            + ": "
-            + userData.getRarityData().get(RarityTypes.UNKNOWN);
+    double commonPercentage = (double) userData.getRarityCount(RarityTypes.COMMON) / total;
+    double uncommonPercentage = (double) userData.getRarityCount(RarityTypes.UNCOMMON) / total;
+    double rarePercentage = (double) userData.getRarityCount(RarityTypes.RARE) / total;
+    double epicPercentage = (double) userData.getRarityCount(RarityTypes.EPIC) / total;
+    double legendaryPercentage = (double) userData.getRarityCount(RarityTypes.LEGENDARY) / total;
+    double unknownPercentage = (double) userData.getRarityCount(RarityTypes.UNKNOWN) / total;
+
+    // @formatter:off
+    final String reply = MessageFormat.format("""
+        <@{0}>
+        Total: {1}
+        {2}: {3} ({4, number, percent})
+        {5}: {6} ({7, number, percent})
+        {8}: {9} ({10, number, percent})
+        {11}: {12} ({13, number, percent})
+        {14}: {15} ({16, number, percent})
+        {17}: {18} ({19, number, percent})
+            """,
+        userData.getAuthorId(),
+        total,
+        RarityTypes.COMMON, userData.getRarityCount(RarityTypes.COMMON), commonPercentage,
+        RarityTypes.UNCOMMON, userData.getRarityCount(RarityTypes.UNCOMMON), uncommonPercentage,
+        RarityTypes.RARE, userData.getRarityCount(RarityTypes.RARE), rarePercentage,
+        RarityTypes.EPIC, userData.getRarityCount(RarityTypes.EPIC), epicPercentage,
+        RarityTypes.LEGENDARY, userData.getRarityCount(RarityTypes.LEGENDARY), legendaryPercentage,
+        RarityTypes.UNKNOWN, userData.getRarityCount(RarityTypes.UNKNOWN), unknownPercentage
+    );
+    // @formatter:on
 
     message.reply(reply).queue();
   }
