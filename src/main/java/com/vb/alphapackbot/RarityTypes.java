@@ -16,13 +16,12 @@
 
 package com.vb.alphapackbot;
 
+import com.google.common.collect.EnumMultiset;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -107,7 +106,7 @@ public enum RarityTypes {
               Range.closed(75, 90)),
           // Duplicates
           new ColorRanges(
-              Range.closed(45, 55),
+              Range.closed(45, 60),
               Range.closed(105, 125),
               Range.closed(140, 165)
           )
@@ -128,11 +127,11 @@ public enum RarityTypes {
       case "Legendary" -> colorRanges = ImmutableList.of(new ColorRanges(
           Range.closed(225, 255),
           Range.closed(140, 170),
-          Range.closed(0, 30)));
+          Range.closed(0, 45)));
       default -> colorRanges = ImmutableList.of(new ColorRanges(
-          Range.closed(0, 0),
-          Range.closed(0, 0),
-          Range.closed(0, 0)));
+          Range.closed(-1, -1),
+          Range.closed(-1, -1),
+          Range.closed(-1, -1)));
     }
   }
 
@@ -153,33 +152,60 @@ public enum RarityTypes {
    * @param image image to be extract rarity from
    * @return Rarity from {@link RarityTypes}
    */
-
   @NotNull
   public static RarityTypes computeRarity(@NotNull BufferedImage image) {
-    final int variationsCount = 3;
-    final List<Integer> widths = new ArrayList<>(variationsCount);
-    widths.add((int) Math.round(image.getWidth() * 0.52192)); // 1002
-    widths.add((int) Math.round(image.getWidth() * 0.489583)); // 940
-    widths.add((int) Math.round(image.getWidth() * 0.489583)); // 940
+    final EnumMultiset<RarityTypes> potentialRarities = EnumMultiset.create(RarityTypes.class);
+    final Area areaOld = new Area(
+        new Coordinates(Math.round(image.getWidth() * 0.486979f), Math.round(image.getHeight() * 0.814815f)),
+        new Coordinates(Math.round(image.getWidth() * 0.507813f), Math.round(image.getHeight() * 0.861111f))
+    );
 
-    final List<Integer> heights = new ArrayList<>(variationsCount);
-    heights.add((int) Math.round(image.getHeight() * 0.907407)); // 980
-    heights.add((int) Math.round(image.getHeight() * 0.8287)); // 895
-    heights.add((int) Math.round(image.getHeight() * 0.912037)); // 985
+    final Area areaNew = new Area(
+        new Coordinates(Math.round(image.getWidth() * 0.510416f), Math.round(image.getHeight() * 0.879630f)),
+        new Coordinates(Math.round(image.getWidth() * 0.546875f), Math.round(image.getHeight() * 0.912037f))
+    );
 
-    RarityTypes computedRarity = RarityTypes.UNKNOWN;
-    outer: for (int i = 0; i < variationsCount; i++) {
-      Color color = new Color(image.getRGB(widths.get(i), heights.get(i)));
-      for (RarityTypes rarity : RarityTypes.values()) {
-        if (checkRarityInPixel(rarity, color)) {
-          computedRarity = rarity;
-        }
-        if (computedRarity != RarityTypes.UNKNOWN) {
-          break outer;
+    EnumMultiset<RarityTypes> oldRarities = analyseRaritiesInArea(image, areaOld);
+    EnumMultiset<RarityTypes> newRarities = analyseRaritiesInArea(image, areaNew);
+
+    potentialRarities.addAll(oldRarities);
+    potentialRarities.addAll(newRarities);
+
+    RarityTypes mostFrequentRarity = RarityTypes.UNKNOWN;
+    int mostFrequentCount = 0;
+    for (var entry : potentialRarities.entrySet()) {
+      if (entry.getElement() == RarityTypes.UNKNOWN) {
+        continue;
+      }
+      if (entry.getCount() > mostFrequentCount) {
+        mostFrequentCount = entry.getCount();
+        mostFrequentRarity = entry.getElement();
+      }
+    }
+    return mostFrequentRarity;
+  }
+
+  private static EnumMultiset<RarityTypes> analyseRaritiesInArea(@NotNull BufferedImage image, Area area) {
+    final EnumMultiset<RarityTypes> potentialRarities = EnumMultiset.create(RarityTypes.class);
+    final Coordinates start = area.start();
+    final Coordinates end = area.end();
+    final int parts = Math.min(30, Math.min(end.x() - start.x(), end.y() - start.y()));
+    final int xPartDistance = (end.x() - start.x()) / parts;
+    final int yPartDistance = (end.y() - start.y()) / parts;
+    for (int i = 0; i < parts; i++) {
+      middle: for (int j = 0; j < parts; j++) {
+        final int x = start.x() + xPartDistance * j;
+        final int y = start.y() + yPartDistance * i;
+        Color color = new Color(image.getRGB(x, y));
+        for (RarityTypes rarity : RarityTypes.values()) {
+          if (checkRarityInPixel(rarity, color)) {
+            potentialRarities.add(rarity);
+            continue middle;
+          }
         }
       }
     }
-    return computedRarity;
+    return potentialRarities;
   }
 
   /**
