@@ -156,7 +156,7 @@ public enum RarityTypes {
   public static RarityTypes computeRarity(@NotNull BufferedImage image) {
     final EnumMultiset<RarityTypes> potentialRarities = EnumMultiset.create(RarityTypes.class);
     final Area areaOld = new Area(
-        new Coordinates(Math.round(image.getWidth() * 0.486979f), Math.round(image.getHeight() * 0.814815f)),
+        new Coordinates(Math.round(image.getWidth() * 0.486979f), Math.round(image.getHeight() * 0.804815f)),
         new Coordinates(Math.round(image.getWidth() * 0.507813f), Math.round(image.getHeight() * 0.861111f))
     );
 
@@ -189,18 +189,21 @@ public enum RarityTypes {
     final EnumMultiset<RarityTypes> potentialRarities = EnumMultiset.create(RarityTypes.class);
     final Coordinates start = area.start();
     final Coordinates end = area.end();
-    final int parts = Math.min(30, Math.min(end.x() - start.x(), end.y() - start.y()));
-    final int xPartDistance = (end.x() - start.x()) / parts;
-    final int yPartDistance = (end.y() - start.y()) / parts;
-    for (int i = 0; i < parts; i++) {
-      middle: for (int j = 0; j < parts; j++) {
-        final int x = start.x() + xPartDistance * j;
-        final int y = start.y() + yPartDistance * i;
+    final int xPartDistance = 2;
+    final int yPartDistance = 2;
+    final int xParts = Math.floorDiv(end.x() - start.x(), xPartDistance) + 1;
+    final int yParts = Math.floorDiv(end.y() - start.y(), yPartDistance) + 1;
+
+    for (int i = 0; i < xParts; i++) {
+      for (int j = 0; j < yParts; j++) {
+        final int x = start.x() + xPartDistance * i;
+        final int y = start.y() + yPartDistance * j;
         Color color = new Color(image.getRGB(x, y));
+        image.setRGB(x, y, Color.ORANGE.getRGB());
         for (RarityTypes rarity : RarityTypes.values()) {
           if (checkRarityInPixel(rarity, color)) {
             potentialRarities.add(rarity);
-            continue middle;
+            break;
           }
         }
       }
