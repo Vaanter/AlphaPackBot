@@ -156,12 +156,12 @@ public enum RarityTypes {
   public static RarityTypes computeRarity(@NotNull BufferedImage image) {
     final EnumMultiset<RarityTypes> potentialRarities = EnumMultiset.create(RarityTypes.class);
     final Area areaOld = new Area(
-        new Coordinates(Math.round(image.getWidth() * 0.486979f), Math.round(image.getHeight() * 0.804815f)),
+        new Coordinates(Math.round(image.getWidth() * 0.486979f), Math.round(image.getHeight() * 0.785185f)),
         new Coordinates(Math.round(image.getWidth() * 0.507813f), Math.round(image.getHeight() * 0.861111f))
     );
 
     final Area areaNew = new Area(
-        new Coordinates(Math.round(image.getWidth() * 0.510416f), Math.round(image.getHeight() * 0.879630f)),
+        new Coordinates(Math.round(image.getWidth() * 0.510416f), Math.round(image.getHeight() * 0.882407f)),
         new Coordinates(Math.round(image.getWidth() * 0.546875f), Math.round(image.getHeight() * 0.912037f))
     );
 
@@ -199,7 +199,6 @@ public enum RarityTypes {
         final int x = start.x() + xPartDistance * i;
         final int y = start.y() + yPartDistance * j;
         Color color = new Color(image.getRGB(x, y));
-        image.setRGB(x, y, Color.ORANGE.getRGB());
         for (RarityTypes rarity : RarityTypes.values()) {
           if (checkRarityInPixel(rarity, color)) {
             potentialRarities.add(rarity);
