@@ -19,7 +19,7 @@ import net.ltgt.gradle.errorprone.errorprone
 plugins {
   java
   id("io.quarkus")
-  id("com.github.ben-manes.versions") version "0.39.0"
+  id("com.github.ben-manes.versions") version "0.51.0"
   id("net.ltgt.errorprone") version "3.1.0"
 }
 
@@ -51,16 +51,16 @@ dependencies {
   implementation("redis.clients:jedis:5.1.0")
   implementation("pw.chew:jda-chewtils:1.24.1")
 
-  implementation("com.google.guava:guava:33.0-jre")
-  implementation("com.google.mug:mug:7.1")
+  implementation("com.google.guava:guava:33.1.0-jre")
+  implementation("com.google.mug:mug:7.2")
   implementation("org.apache.commons:commons-lang3:3.14.0")
-  errorprone("com.google.errorprone:error_prone_core:2.24.1")
+  errorprone("com.google.errorprone:error_prone_core:2.26.1")
 
   testImplementation("io.quarkus:quarkus-junit5")
 }
 
 group = "com.vb.alphapackbot"
-version = "5.0.0"
+version = "5.1.0"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -69,6 +69,7 @@ java {
 
 tasks.withType<Test> {
   systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
+  jvmArgs("-Djdk.tracePinnedThreads", "-Xmx4G", "-XX:+ZGenerational")
 }
 tasks.withType<JavaCompile> {
   options.encoding = "UTF-8"
